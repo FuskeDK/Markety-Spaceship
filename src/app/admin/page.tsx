@@ -285,72 +285,105 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/Markety.png" alt="Markety" className="h-7 w-auto" />
-            <span className="text-sm text-gray-300">|</span>
-            <span className="text-sm font-semibold text-gray-700">Admin</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
-              <input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)}
-                placeholder="Search clients, leads…"
-                className="h-8 pl-8 pr-7 rounded-lg border border-gray-200 text-xs w-48 focus:outline-none focus:ring-2 focus:ring-purple-200 placeholder:text-gray-300 text-gray-800" />
-              {globalSearch && <button onClick={() => setGlobalSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><X className="w-3 h-3" /></button>}
-            </div>
-            <button onClick={() => fetchData(authedPw!)} disabled={dataLoading}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40">
-              <RefreshCw className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin" : ""}`} /> Refresh
-            </button>
-            <button onClick={logout} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              <LogOut className="w-3.5 h-3.5" /> Sign out
-            </button>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+        {/* Logo */}
+        <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-100 shrink-0">
+          <img src="/markety-logo.png" alt="Markety" className="h-5 w-auto" />
+          <span className="text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Admin</span>
+        </div>
+
+        {/* Search */}
+        <div className="px-3 pt-4 pb-2 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+            <input
+              value={globalSearch}
+              onChange={e => setGlobalSearch(e.target.value)}
+              placeholder="Search…"
+              className="w-full h-8 pl-8 pr-6 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-200 placeholder:text-gray-300 text-gray-800 bg-gray-50"
+            />
+            {globalSearch && (
+              <button onClick={() => setGlobalSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1 sm:gap-5 border-t border-gray-100 overflow-x-auto">
+
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
           {TABS.map(t => (
-            <button key={t.id} onClick={() => handleTabClick(t.id)}
-              className={`flex items-center gap-1.5 py-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                tab === t.id ? "text-gray-900" : "border-transparent text-gray-400 hover:text-gray-600"
+            <button
+              key={t.id}
+              onClick={() => handleTabClick(t.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                tab === t.id
+                  ? "text-purple-700"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               }`}
-              style={tab === t.id ? { borderColor: "hsl(252 89% 58%)", color: "#111827" } : {}}>
-              <t.icon className="w-3.5 h-3.5 hidden sm:block" />
-              <span className={t.blink && tab !== t.id ? "tab-notification" : ""}>{t.label}</span>
+              style={tab === t.id ? { background: "hsl(252 89% 58% / 0.08)" } : {}}
+            >
+              <t.icon className={`w-4 h-4 shrink-0 ${tab === t.id ? "text-purple-600" : ""}`} />
+              <span className="flex-1">{t.label}</span>
+              {t.blink && tab !== t.id && (
+                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+              )}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {globalSearch.trim().length > 1 ? (
-          <GlobalSearchResults query={globalSearch} clients={clients} onClose={() => setGlobalSearch("")} />
-        ) : dataLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: "hsl(252 89% 58%) transparent transparent transparent" }} />
-          </div>
-        ) : tab === "overview" ? (
-          <OverviewTab stats={stats} leadsToday={leadsToday} earningsToday={earningsToday} clients={clients} onNavigate={(t) => setTab(t as typeof tab)} />
-        ) : tab === "clients" ? (
-          <ClientsTab clients={clients} pending={pending} invoiced={invoiced} expanded={expanded}
-            setExpanded={setExpanded} handleInvoice={handleInvoice} authedPw={authedPw!} setClients={setClients} />
-        ) : tab === "all-leads" ? (
-          <AllLeadsTab clients={clients} authedPw={authedPw!} />
-        ) : tab === "invoice-queue" ? (
-          <BillingTab authedPw={authedPw!} onInvoiceSent={() => fetchData(authedPw!)} />
-        ) : tab === "outreach" ? (
-          <OutreachTab authedPw={authedPw!} />
-        ) : tab === "emails" ? (
-          <EmailsTab authedPw={authedPw!} />
-        ) : tab === "content" ? (
-          <ContentTab authedPw={authedPw!} />
-        ) : (
-          <ContactsTab authedPw={authedPw!} />
-        )}
-      </div>
+        {/* Bottom */}
+        <div className="px-2 py-3 border-t border-gray-100 space-y-0.5 shrink-0">
+          <button
+            onClick={() => fetchData(authedPw!)}
+            disabled={dataLoading}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw className={`w-4 h-4 shrink-0 ${dataLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {globalSearch.trim().length > 1 ? (
+            <GlobalSearchResults query={globalSearch} clients={clients} onClose={() => setGlobalSearch("")} />
+          ) : dataLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "hsl(252 89% 58%) transparent transparent transparent" }} />
+            </div>
+          ) : tab === "overview" ? (
+            <OverviewTab stats={stats} leadsToday={leadsToday} earningsToday={earningsToday} clients={clients} onNavigate={(t) => setTab(t as typeof tab)} />
+          ) : tab === "clients" ? (
+            <ClientsTab clients={clients} pending={pending} invoiced={invoiced} expanded={expanded}
+              setExpanded={setExpanded} handleInvoice={handleInvoice} authedPw={authedPw!} setClients={setClients} />
+          ) : tab === "all-leads" ? (
+            <AllLeadsTab clients={clients} authedPw={authedPw!} />
+          ) : tab === "invoice-queue" ? (
+            <BillingTab authedPw={authedPw!} onInvoiceSent={() => fetchData(authedPw!)} />
+          ) : tab === "outreach" ? (
+            <OutreachTab authedPw={authedPw!} />
+          ) : tab === "emails" ? (
+            <EmailsTab authedPw={authedPw!} />
+          ) : tab === "content" ? (
+            <ContentTab authedPw={authedPw!} />
+          ) : (
+            <ContactsTab authedPw={authedPw!} />
+          )}
+        </div>
+      </main>
     </div>
   );
 }
