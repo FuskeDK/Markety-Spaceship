@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Supported locale prefixes in the URL (e.g. /da-DK, /de-DE)
 const LOCALE_RE = /^\/(da-DK|de-DE|sv-SE|nb-NO|fr-FR|es-ES|nl-NL|it-IT|pt-PT|pl-PL|fi-FI|ru-RU|ja-JP|zh-CN|ko-KR|ar-SA|tr-TR|hi-IN)(\/.*)?$/;
 
-// Map locale → Google Translate lang code
 const GT_CODES: Record<string, string> = {
   "da-DK": "da", "de-DE": "de", "sv-SE": "sv", "nb-NO": "no",
   "fr-FR": "fr", "es-ES": "es", "nl-NL": "nl", "it-IT": "it",
@@ -21,12 +19,16 @@ export function middleware(req: NextRequest) {
   const rest = match[2] ?? "/";
   const gtCode = GT_CODES[locale];
 
-  // Redirect to Google Translate proxy which preserves the feel of the site
-  const origin = req.nextUrl.origin;
-  const targetUrl = `${origin}${rest}`;
-  const gtUrl = `https://translate.google.com/translate?sl=en&tl=${gtCode}&u=${encodeURIComponent(targetUrl)}`;
+  // Rewrite internally — URL in browser stays /da-DK/... but page content
+  // is served from the base path. The googtrans cookie triggers the
+  // Google Translate widget to auto-translate the page on load.
+  const rewritten = req.nextUrl.clone();
+  rewritten.pathname = rest || "/";
 
-  return NextResponse.redirect(gtUrl, { status: 302 });
+  const res = NextResponse.rewrite(rewritten);
+  res.cookies.set("googtrans", `/en/${gtCode}`, { path: "/" });
+  res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 365 * 24 * 3600 });
+  return res;
 }
 
 export const config = {
