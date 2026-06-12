@@ -1,0 +1,1221 @@
+/* eslint-disable import/order */
+// Central admin API handler. Every admin action is routed through this single
+// file via an `action` query/body param rather than separate routes.
+// Authentication: most actions require the x-admin-password header matching
+// ADMIN_PASSWORD env var (enforced by isAuthed()). Exceptions:
+//   - "login"         — validates the password and returns success/failure
+//   - "find-companies"— public CVR/company lookup (no auth)
+//   - "cron-*"        — authenticated by CRON_SECRET Bearer token (Vercel cron)
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "crypto";
+import { ImapFlow } from "imapflow";
+import { createClickUpTask } from "@/lib/server/_clickup";
+import { sendEmail } from "@/lib/server/_mailer";
+
+async function appendToSent({ to, subject, html, messageId }: { to: string; subject: string; html: string; messageId?: string }) {
+  const client = new ImapFlow({
+    host: "mail.spacemail.com",
+    port: 993,
+    secure: true,
+    auth: { user: "info@marketyleadgen.com", pass: process.env.SPACEMAIL_PASSWORD ?? "" },
+    logger: false,
+  });
+  await client.connect();
+  const raw = [
+    `From: Markety <info@marketyleadgen.com>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `Message-ID: ${messageId ?? `<${Date.now()}@marketyleadgen.com>`}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/html; charset=utf-8`,
+    ``,
+    html,
+  ].join("\r\n");
+  const sentFolder = "Sent";
+  const appendResult = await client.append(sentFolder, Buffer.from(raw));
+  if (appendResult && typeof appendResult === "object" && "uid" in appendResult && appendResult.uid) {
+    await client.mailboxOpen(sentFolder);
+    await client.messageFlagsRemove({ uid: appendResult.uid as number }, ["\\Seen"]);
+  }
+  await client.logout();
+}
+
+function money(n: number, currency: string) {
+  return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+}
+
+function isAuthed(req: NextRequest): boolean {
+  const pw = req.headers.get("x-admin-password");
+  return !!pw && pw === process.env.ADMIN_PASSWORD;
+}
+
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const RATE_MAX = 5;
+const RATE_WINDOW_MS = 15 * 60 * 1000;
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+  if (!record || now >= record.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (record.count >= RATE_MAX) return false;
+  record.count++;
+  return true;
+}
+
+async function handleRequest(req: NextRequest): Promise<NextResponse> {
+  try {
+    const url = new URL(req.url);
+    const searchParams = url.searchParams;
+
+    let body: Record<string, unknown> = {};
+    if (req.method === "POST" || req.method === "DELETE") {
+      body = await req.json().catch(() => ({}));
+    }
+
+    const action = (searchParams.get("action") ?? body?.action) as string;
+
+    if (!action) return NextResponse.json({ error: "No action specified" }, { status: 400 });
+
+    // ── Cron: monthly auto-invoice (authenticated by CRON_SECRET) ─────────────
+    if (action === "cron-invoice") {
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.get("authorization");
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+      const supabaseCron = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const monthName = now.toLocaleString("en-GB", { month: "long", year: "numeric" });
+      const { data: allClients } = await supabaseCron.from("clients").select("id, token, name, company, email, price_per_lead, currency, language, last_invoiced_at");
+      let sent = 0; const errors: string[] = [];
+      for (const client of allClients ?? []) {
+        if (client.last_invoiced_at) { const d = new Date(client.last_invoiced_at); if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) continue; }
+        const { data: leadsData } = await supabaseCron.from("leads").select("price").eq("client_id", client.id).gte("created_at", monthStart.toISOString());
+        const leads = leadsData ?? []; if (leads.length === 0) continue;
+        const amountDue = leads.reduce((sum: number, l: { price: number | null }) => sum + (l.price != null ? Number(l.price) : client.price_per_lead), 0);
+        const cur = client.currency || "DKK"; const isDa = (client.language ?? "en") === "da";
+        const dashUrl = `https://marketyleadgen.com/dashboard/${client.token}`;
+        const html = `<html><body style="font-family:sans-serif;padding:32px 16px;"><img src="https://www.marketyleadgen.com/MarketySquare.png" width="48" style="border-radius:10px;margin-bottom:20px;"><h2 style="color:#0f172a;">${isDa ? `Hej ${client.name.split(" ")[0]}, her er din faktura for ${monthName}` : `Hi ${client.name.split(" ")[0]}, here is your invoice for ${monthName}`}</h2><p style="color:#374151;">${isDa ? `${leads.length} leads leveret - samlet ${money(amountDue, cur)}` : `${leads.length} leads delivered - total ${money(amountDue, cur)}`}</p><a href="${dashUrl}" style="display:inline-block;padding:12px 24px;background:#5B21F4;color:#fff;text-decoration:none;border-radius:50px;font-weight:700;">${isDa ? "Se faktura" : "View invoice"}</a></body></html>`;
+        try {
+          await sendEmail({ to: client.email, subject: isDa ? `Faktura ${monthName} · ${money(amountDue, cur)}` : `Invoice ${monthName} · ${money(amountDue, cur)}`, html, replyTo: "info@marketyleadgen.com" });
+          await supabaseCron.from("clients").update({ last_invoiced_at: now.toISOString() }).eq("id", client.id);
+          await supabaseCron.from("invoices").upsert({ client_id: client.id, month_key: monthKey, month_label: monthName, leads_count: leads.length, amount: amountDue, currency: cur, sent_at: now.toISOString() }, { onConflict: "client_id,month_key" });
+          sent++;
+        } catch (e) { errors.push(`${client.company}: ${String(e)}`); }
+      }
+      sendEmail({ to: "info@marketyleadgen.com", subject: `Auto-invoicing done - ${sent} sent`, html: `<p style="font-family:sans-serif;">${sent} invoices sent for ${monthName}.${errors.length ? " Errors: " + errors.join(", ") : ""}</p>` }).catch(() => {});
+      return NextResponse.json({ sent, errors });
+    }
+
+    // ── Cron: monthly DB cleanup ──────────────────────────────────────────────
+    if (action === "cron-cleanup") {
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.get("authorization");
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+      const supabaseCron = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const [rejectedContent, oldReplied] = await Promise.all([
+        supabaseCron.from("content_approvals").delete().eq("status", "rejected").lte("created_at", thirtyDaysAgo),
+        supabaseCron.from("contact_submissions").delete().not("replied_at", "is", null).lte("created_at", sixMonthsAgo),
+      ]);
+
+      console.log("[CLEANUP]", { rejectedContent: rejectedContent.error, oldReplied: oldReplied.error });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Cron: 24h follow-up reminder ─────────────────────────────────────────
+    if (action === "cron-followup") {
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.get("authorization");
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+      const supabaseCron = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString();
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data: staleLeads } = await supabaseCron.from("leads").select("id, name, phone, email, created_at, clients(name, company, email, token, language)").eq("lead_status", "new").lte("created_at", twentyHoursAgo).gte("created_at", fortyEightHoursAgo);
+      let sent = 0;
+      for (const lead of staleLeads ?? []) {
+        const client = (Array.isArray(lead.clients) ? lead.clients[0] : lead.clients) as { name: string; company: string; email: string; token: string; language: string } | null;
+        if (!client?.email) continue;
+        const isDa = (client.language ?? "en") === "da"; const leadName = lead.name ?? lead.phone ?? lead.email ?? "a lead";
+        const dashUrl = `https://marketyleadgen.com/dashboard/${client.token}`;
+        const html = `<html><body style="font-family:sans-serif;padding:32px 16px;background:#fff8ed;"><img src="https://www.marketyleadgen.com/MarketySquare.png" width="48" style="border-radius:10px;margin-bottom:16px;"><h2 style="color:#0f172a;">${isDa ? "Husker du dette lead?" : "Did you follow up?"}</h2><p style="color:#374151;">${isDa ? `<strong>${leadName}</strong> udfyldte din formular for over 20 timer siden og er endnu ikke kontaktet.` : `<strong>${leadName}</strong> filled in your form over 20 hours ago and hasn't been contacted yet.`}</p>${lead.phone ? `<p><a href="tel:${lead.phone}" style="color:#5B21F4;font-weight:600;">${lead.phone}</a></p>` : ""}${lead.email ? `<p><a href="mailto:${lead.email}" style="color:#5B21F4;">${lead.email}</a></p>` : ""}<a href="${dashUrl}" style="display:inline-block;padding:12px 24px;background:#5B21F4;color:#fff;text-decoration:none;border-radius:50px;font-weight:700;">${isDa ? "Se i dashboard" : "View in dashboard"}</a></body></html>`;
+        try { await sendEmail({ to: client.email, subject: isDa ? `Husker du ${leadName}?` : `Reminder: ${leadName} is still waiting`, html, replyTo: "info@marketyleadgen.com" }); sent++; } catch { /* continue */ }
+      }
+      return NextResponse.json({ sent });
+    }
+
+    // Validate required environment variables
+    if (!process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({ error: "ADMIN_PASSWORD not configured" }, { status: 500 });
+    }
+
+    // ── Login (no auth required) ──────────────────────────────────────────────
+    if (req.method === "POST" && action === "login") {
+      const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+      if (!checkLoginRateLimit(ip)) {
+        return NextResponse.json({ error: "Too many login attempts. Try again in 15 minutes." }, { status: 429 });
+      }
+      const { password } = body;
+      const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+      if (!adminPassword) return NextResponse.json({ error: "Admin not configured" }, { status: 500 });
+      if (((password as string) ?? "").trim() !== adminPassword) {
+        return NextResponse.json({ error: "Wrong password" }, { status: 401 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Company finder (no auth required - uses public CVR API) ──────────────
+    if (req.method === "GET" && action === "find-companies") {
+      const q = searchParams.get("q") ?? "";
+      const vat = searchParams.get("vat") ?? "";
+      if (!q && !vat) return NextResponse.json({ error: "Query required" }, { status: 400 });
+      try {
+        const apiUrl = vat
+          ? `https://cvrapi.dk/api?vat=${encodeURIComponent(vat)}&country=dk`
+          : `https://cvrapi.dk/api?search=${encodeURIComponent(q)}&country=dk`;
+        const r = await fetch(apiUrl, { headers: { "User-Agent": "Markety/1.0 info@marketyleadgen.com" } });
+        if (!r.ok) return NextResponse.json({ result: null });
+        const data = await r.json();
+
+        if (data.vat && !data.homepage) {
+          try {
+            const virk = await fetch("https://data.virk.dk/v1/cvr-permanent/virksomhed/_search", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "User-Agent": "Markety/1.0" },
+              body: JSON.stringify({
+                _source: ["Vrvirksomhed.hjemmeside"],
+                query: { term: { "Vrvirksomhed.cvrNummer": data.vat } },
+                size: 1,
+              }),
+            });
+            if (virk.ok) {
+              const virkData = await virk.json();
+              const hits = virkData?.hits?.hits ?? [];
+              const homepage = hits[0]?._source?.Vrvirksomhed?.hjemmeside?.[0]?.kontaktoplysning;
+              if (homepage) data.homepage = homepage.startsWith("http") ? homepage : `https://${homepage}`;
+            }
+          } catch { /* ignore - homepage stays null */ }
+        }
+
+        return NextResponse.json({ result: data });
+      } catch {
+        return NextResponse.json({ result: null });
+      }
+    }
+
+    // All other actions require auth
+    if (!isAuthed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+    }
+
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // ── Clients list ──────────────────────────────────────────────────────────
+    if (req.method === "GET" && action === "clients") {
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("id, token, name, company, email, phone, price_per_lead, currency, created_at, last_invoiced_at, language, lead_cap, cap_paused, deal_value, onboarding_steps")
+        .order("created_at", { ascending: false });
+
+      if (!clients) return NextResponse.json({ clients: [] });
+
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const clientsWithLeads = await Promise.all(
+        clients.map(async (client) => {
+          const { data: allLeads } = await supabase
+            .from("leads")
+            .select("id, name, email, phone, source, created_at, price, lead_status, lead_notes")
+            .eq("client_id", client.id)
+            .order("created_at", { ascending: false });
+          const leads = allLeads ?? [];
+          const thisMonthLeads = leads.filter((l: { created_at: string }) => new Date(l.created_at) >= monthStart);
+          const amount_due = thisMonthLeads.reduce((acc: number, l: { price: number | null }) => acc + (l.price != null ? Number(l.price) : 0), 0);
+          return {
+            ...client,
+            leads,
+            leads_this_month: thisMonthLeads.length,
+            amount_due,
+          };
+        })
+      );
+
+      return NextResponse.json({ clients: clientsWithLeads });
+    }
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
+    if (req.method === "GET" && action === "stats") {
+      const year = new Date().getFullYear();
+      const yearStart = `${year}-01-01`;
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { data: leads } = await supabase
+        .from("leads")
+        .select("created_at, client_id, price, clients(price_per_lead)")
+        .gte("created_at", yearStart);
+
+      const rows = (leads ?? []) as unknown as Array<{
+        created_at: string;
+        price: number | null;
+        clients: { price_per_lead: number }[] | null;
+      }>;
+
+      const months: Record<number, { leads: number; earnings: number }> = {};
+      for (let m = 0; m < 12; m++) months[m] = { leads: 0, earnings: 0 };
+
+      let earningsThisYear = 0;
+      let earningsThisMonth = 0;
+      let leadsThisMonth = 0;
+
+      for (const row of rows) {
+        const d = new Date(row.created_at);
+        const m = d.getMonth();
+        const fallback = (Array.isArray(row.clients) ? row.clients[0] : row.clients)?.price_per_lead ?? 0;
+        const price = row.price != null ? Number(row.price) : fallback;
+        months[m].leads++;
+        months[m].earnings += price;
+        earningsThisYear += price;
+        if (d >= monthStart) {
+          earningsThisMonth += price;
+          leadsThisMonth++;
+        }
+      }
+
+      const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const currentMonth = new Date().getMonth();
+
+      const monthlyBreakdown = Array.from({ length: currentMonth + 1 }, (_, i) => ({
+        month: MONTH_NAMES[i],
+        leads: months[i].leads,
+        earnings: Math.round(months[i].earnings * 100) / 100,
+      }));
+
+      const { count: totalClients } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true });
+
+      return NextResponse.json({
+        earningsThisYear: Math.round(earningsThisYear * 100) / 100,
+        earningsThisMonth: Math.round(earningsThisMonth * 100) / 100,
+        leadsThisYear: rows.length,
+        leadsThisMonth,
+        totalClients: totalClients ?? 0,
+        monthlyBreakdown,
+      });
+    }
+
+    // ── Mark invoice ──────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "invoice") {
+      const { clientId, invoiced } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      await supabase
+        .from("clients")
+        .update({ last_invoiced_at: invoiced ? new Date().toISOString() : null })
+        .eq("id", clientId);
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Send invoice email ────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "send-invoice") {
+      const { default: Stripe } = await import("stripe");
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id, token, name, company, email, price_per_lead, currency, language")
+        .eq("id", clientId)
+        .single();
+
+      if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { data: leadsThisMonth } = await supabase
+        .from("leads")
+        .select("price, name, email, source, created_at")
+        .eq("client_id", client.id)
+        .gte("created_at", monthStart.toISOString())
+        .order("created_at", { ascending: true });
+
+      const leads = (leadsThisMonth ?? []).length;
+      const amountDue = (leadsThisMonth ?? []).reduce(
+        (sum: number, l: { price: number | null }) => sum + (l.price != null ? Number(l.price) : client.price_per_lead),
+        0
+      );
+      const lang = (client.language ?? "en") as string;
+      const isDa = lang === "da";
+      const locale = isDa ? "da-DK" : "en-GB";
+      const monthName = new Date().toLocaleString(locale, { month: "long", year: "numeric" });
+      const t = {
+        invoice: isDa ? "Faktura" : "Invoice",
+        hi: isDa ? `Hej, ${client.name}` : `Hi, ${client.name}`,
+        intro: isDa ? `Her er din faktura for ${monthName}` : `Here is your invoice for ${monthName}`,
+        colLead: isDa ? "Lead" : "Lead",
+        colSource: isDa ? "Kilde" : "Source",
+        colPrice: isDa ? "Pris" : "Price",
+        total: isDa ? "I alt" : "Total due",
+        payNow: isDa ? "Betal nu" : "Pay now",
+        viewInvoice: isDa ? "Se faktura" : "View invoice",
+        fallback: isDa ? "Knappen virker ikke? <a href=\"PAYURL\" style=\"color:#4c1d95;\">Klik her for at betale</a>" : "Button not working? <a href=\"PAYURL\" style=\"color:#4c1d95;\">Click here to pay</a>",
+        questions: isDa ? "Har du spørgsmål? Svar på denne e-mail - vi hjælper gerne." : "If you have questions, just hit reply - we're here to help.",
+        subject: isDa ? `Faktura ${monthName} - ${leads} leads` : `Invoice ${monthName} - ${leads} leads`,
+      };
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      let paymentUrl: string | null = null;
+      if (process.env.STRIPE_SECRET_KEY && amountDue > 0) {
+        try {
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+          const session = await stripe.checkout.sessions.create({
+            mode: "payment",
+            payment_method_types: ["card"],
+            line_items: [{
+              price_data: {
+                currency: (client.currency || "USD").toLowerCase(),
+                product_data: { name: `${leads} leads – ${monthName}` },
+                unit_amount: Math.round(amountDue * 100),
+              },
+              quantity: 1,
+            }],
+            metadata: { client_id: client.id, month_key: monthKey },
+            success_url: `https://marketyleadgen.com/dashboard/${client.token}`,
+            cancel_url: `https://marketyleadgen.com/dashboard/${client.token}`,
+          });
+          paymentUrl = session.url;
+        } catch (err) {
+          console.error("Stripe session error:", err);
+        }
+      }
+
+      if (!process.env.SPACEMAIL_PASSWORD) return NextResponse.json({ error: "Email service not configured" }, { status: 500 });
+
+      const cur = client.currency || "DKK";
+      const ctaHref = paymentUrl ?? `https://marketyleadgen.com/dashboard/${client.token}`;
+      const ctaLabel = paymentUrl ? t.payNow : t.viewInvoice;
+      const footerNote = paymentUrl ? t.fallback.replace("PAYURL", paymentUrl) : t.questions;
+      const leadsLine = isDa ? `${leads} leads leveret i ${monthName}` : `${leads} leads delivered in ${monthName}`;
+
+      const html = `<!DOCTYPE html>
+<html lang="${lang}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:36px 16px 32px;">
+<tr><td align="center">
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+    <tr><td align="center">
+      <img src="https://www.marketyleadgen.com/MarketySquare.png" alt="Markety" width="64" height="64" style="display:block;border-radius:14px;">
+    </td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:540px;background:#f4f4f5;border-radius:20px;overflow:hidden;">
+    <tr><td style="padding:36px 36px 32px;">
+      <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;color:#0f172a;letter-spacing:-0.03em;">${t.hi}</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.5;">${t.intro}</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 26px;">
+      <h2 style="margin:0 0 10px;font-size:18px;font-weight:700;color:#0f172a;">${isDa ? "Informationer omkring faktura" : "Invoice details"}</h2>
+      <ul style="margin:0 0 6px;padding-left:18px;">
+        <li style="font-size:14px;color:#374151;margin-bottom:4px;">${leadsLine}</li>
+        <li style="font-size:14px;color:#374151;">${isDa ? `Samlet beløb: <strong>${money(amountDue, cur)}</strong>` : `Total amount: <strong>${money(amountDue, cur)}</strong>`}</li>
+      </ul>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:26px 0;">
+      <h2 style="margin:0 0 10px;font-size:18px;font-weight:700;color:#0f172a;">${isDa ? "Betaling" : "Payment"}</h2>
+      <p style="margin:0 0 22px;font-size:14px;color:#64748b;line-height:1.65;">${isDa ? `Den samlede pris er <strong style="color:#0f172a;">${money(amountDue, cur)}</strong> - betal ved at trykke på knappen forneden` : `The total amount is <strong style="color:#0f172a;">${money(amountDue, cur)}</strong> - pay by clicking the button below`}</p>
+      <table cellpadding="0" cellspacing="0" border="0">
+        <tr><td bgcolor="#5B21F4" style="border-radius:50px;">
+          <a href="${ctaHref}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">${ctaLabel}</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;max-width:500px;width:100%;">
+    <tr><td bgcolor="#ede9fe" style="border-radius:50px;padding:14px 28px;text-align:center;">
+      <span style="font-size:14px;color:#4c1d95;">${footerNote}</span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+      try {
+        await sendEmail({
+          to: client.email,
+          subject: `${t.subject} · ${money(amountDue, cur)}`,
+          html,
+          replyTo: "info@marketyleadgen.com",
+        });
+      } catch (err) {
+        console.error("Invoice email error:", err);
+        return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
+      }
+
+      await Promise.all([
+        supabase.from("clients").update({ last_invoiced_at: now.toISOString() }).eq("id", clientId),
+        supabase.from("invoices").upsert(
+          {
+            client_id: client.id,
+            month_key: monthKey,
+            month_label: monthName,
+            leads_count: leads,
+            amount: amountDue,
+            currency: client.currency || "USD",
+            stripe_link: paymentUrl,
+            sent_at: now.toISOString(),
+          },
+          { onConflict: "client_id,month_key" }
+        ),
+      ]);
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Add client ────────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "add-client") {
+      const { name, company, email, price_per_lead, currency } = body;
+      if (!name || !company || !email || !price_per_lead) {
+        return NextResponse.json({ error: "name, company, email, and price_per_lead are required" }, { status: 400 });
+      }
+      const token = randomBytes(24).toString("hex");
+      const { data: client, error } = await supabase
+        .from("clients")
+        .insert({
+          name: (name as string).trim(),
+          company: (company as string).trim(),
+          email: (email as string).trim().toLowerCase(),
+          price_per_lead: parseFloat(price_per_lead as string),
+          currency: (currency as string) || "USD",
+          token,
+          claimed: false,
+        })
+        .select("id, token")
+        .single();
+      if (error || !client) {
+        console.error("Add client error:", error);
+        return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
+      }
+
+      const dashboardUrl = `https://marketyleadgen.com/dashboard/${client.token}`;
+
+      if (process.env.SPACEMAIL_PASSWORD) {
+        const firstName = (name as string).trim().split(" ")[0];
+        const welcomeHtml = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:36px 16px 40px;">
+<tr><td align="center">
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+    <tr><td align="center">
+      <img src="https://www.marketyleadgen.com/MarketySquare.png" alt="Markety" width="60" height="60" style="display:block;border-radius:14px;">
+    </td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#f4f4f5;border-radius:20px;overflow:hidden;">
+    <tr><td style="padding:36px 36px 12px;">
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">Welcome, ${firstName}.</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.6;">Your Markety dashboard is live. Here's everything you need to get started.</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 28px;">
+      <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-bottom:28px;background:#ffffff;border-radius:14px;overflow:hidden;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#5B21F4;text-transform:uppercase;letter-spacing:0.08em;">Step 1 - Do this first</p>
+          <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#0f172a;">Set up your password</p>
+          <p style="margin:0 0 16px;font-size:13px;color:#64748b;line-height:1.6;">Click the button below to open your dashboard. The first time you visit, you'll be asked to create a password.</p>
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr><td bgcolor="#5B21F4" style="border-radius:50px;">
+              <a href="${dashboardUrl}" style="display:inline-block;padding:11px 24px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Open dashboard and set password</a>
+            </td></tr>
+          </table>
+          <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">Your personal link: <a href="${dashboardUrl}" style="color:#5B21F4;text-decoration:none;">${dashboardUrl}</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;max-width:500px;width:100%;">
+    <tr><td bgcolor="#ede9fe" style="border-radius:50px;padding:14px 28px;text-align:center;">
+      <span style="font-size:13px;color:#4c1d95;">Questions? Just reply to this email. We're here to help.</span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+        sendEmail({
+          to: (email as string).trim().toLowerCase(),
+          subject: `Welcome to Markety - here's how your dashboard works`,
+          html: welcomeHtml,
+          replyTo: "info@marketyleadgen.com",
+        }).catch(() => {});
+      }
+
+      const onboardingListId = process.env.CLICKUP_ONBOARDING_LIST;
+      if (onboardingListId) {
+        createClickUpTask(onboardingListId, `[ONBOARD] ${(company as string).trim()}`, [
+          `Client: ${(name as string).trim()}`,
+          `Email: ${(email as string).trim()}`,
+          `Price/lead: ${price_per_lead} ${currency || "USD"}`,
+          `Dashboard: ${dashboardUrl}`,
+          ``,
+          `Tasks:`,
+          `- Set up Facebook/Google Ads`,
+          `- Build landing page`,
+          `- Configure lead form with token`,
+          `- Test lead submission`,
+          `- Confirm first lead received`,
+        ].join("\n")).catch(() => {});
+      }
+
+      return NextResponse.json({ success: true, token: client.token });
+    }
+
+    // ── Delete client ─────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "delete-client") {
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      await supabase.from("leads").delete().eq("client_id", clientId);
+      await supabase.from("invoices").delete().eq("client_id", clientId);
+      const { error } = await supabase.from("clients").delete().eq("id", clientId);
+      if (error) { console.error("Delete client error:", error); return NextResponse.json({ error: "Failed to delete client" }, { status: 500 }); }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Update client ─────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "update-client") {
+      const { clientId, name, company, email, phone, price_per_lead, currency, language, lead_cap } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+
+      const updates: Record<string, unknown> = {};
+      if (name !== undefined) updates.name = (name as string).trim();
+      if (company !== undefined) updates.company = (company as string).trim();
+      if (email !== undefined) updates.email = (email as string).trim().toLowerCase();
+      if (phone !== undefined) updates.phone = (phone as string).trim() || null;
+      if (price_per_lead !== undefined) {
+        const p = parseFloat(price_per_lead as string);
+        if (isNaN(p) || p < 0) return NextResponse.json({ error: "Invalid price_per_lead" }, { status: 400 });
+        updates.price_per_lead = p;
+      }
+      if (currency !== undefined) updates.currency = currency;
+      if (language !== undefined) updates.language = language;
+      if (lead_cap !== undefined) {
+        if (lead_cap === null || lead_cap === "") {
+          updates.lead_cap = null;
+        } else {
+          const cap = Number(lead_cap);
+          if (isNaN(cap) || cap < 1) return NextResponse.json({ error: "Invalid lead_cap" }, { status: 400 });
+          updates.lead_cap = cap;
+        }
+      }
+
+      const { error } = await supabase.from("clients").update(updates).eq("id", clientId);
+      if (error) { console.error("Update client error:", error); return NextResponse.json({ error: "Failed to update client" }, { status: 500 }); }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Reactivate client ────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "reactivate-client") {
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      const { error } = await supabase.from("clients").update({ cap_paused: false }).eq("id", clientId);
+      if (error) { console.error("Reactivate error:", error); return NextResponse.json({ error: "Failed to reactivate" }, { status: 500 }); }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Remove cap ────────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "remove-cap") {
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      const { error } = await supabase.from("clients").update({ cap_paused: false, lead_cap: null }).eq("id", clientId);
+      if (error) { console.error("Remove cap error:", error); return NextResponse.json({ error: "Failed to remove cap" }, { status: 500 }); }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Generate payment link ─────────────────────────────────────────────────
+    if (req.method === "POST" && action === "generate-payment-link") {
+      const { default: Stripe } = await import("stripe");
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id, name, company, price_per_lead, currency")
+        .eq("id", clientId)
+        .single();
+      if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const monthName = now.toLocaleString("en-GB", { month: "long", year: "numeric" });
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("price")
+        .eq("client_id", client.id)
+        .gte("created_at", monthStart.toISOString());
+
+      const leads = (leadsData ?? []).length;
+      const amountDue = (leadsData ?? []).reduce(
+        (sum: number, l: { price: number | null }) => sum + (l.price != null ? Number(l.price) : client.price_per_lead),
+        0
+      );
+      if (amountDue <= 0) return NextResponse.json({ error: "No amount due this month" }, { status: 400 });
+
+      try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+        const session = await stripe.checkout.sessions.create({
+          mode: "payment",
+          payment_method_types: ["card"],
+          line_items: [{
+            price_data: {
+              currency: (client.currency || "USD").toLowerCase(),
+              product_data: { name: `${leads} leads – ${monthName}` },
+              unit_amount: Math.round(amountDue * 100),
+            },
+            quantity: 1,
+          }],
+          metadata: { client_id: client.id, month_key: monthKey },
+          success_url: "https://marketyleadgen.com",
+          cancel_url: "https://marketyleadgen.com",
+        });
+
+        await supabase.from("invoices")
+          .update({ stripe_link: session.url })
+          .eq("client_id", clientId)
+          .eq("month_key", monthKey);
+
+        return NextResponse.json({ success: true, url: session.url });
+      } catch (err) {
+        const msg = (err as Error).message ?? String(err);
+        console.error("Stripe session error:", msg);
+        return NextResponse.json({ error: msg }, { status: 502 });
+      }
+    }
+
+    // ── Reset client password ────────────────────────────────────────────────
+    if (req.method === "POST" && action === "reset-client-password") {
+      const { clientId } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      const { error } = await supabase
+        .from("clients")
+        .update({ claimed: false, password_hash: null })
+        .eq("id", clientId);
+      if (error) { console.error("Reset password error:", error); return NextResponse.json({ error: "Failed to reset password" }, { status: 500 }); }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Delete lead ──────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "delete-lead") {
+      const { leadId } = body;
+      if (!leadId) return NextResponse.json({ error: "leadId required" }, { status: 400 });
+      const { error } = await supabase.from("leads").delete().eq("id", leadId);
+      if (error) return NextResponse.json({ error: "Failed to delete lead" }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Toggle invoice paid ───────────────────────────────────────────────────
+    if (req.method === "POST" && action === "toggle-invoice-paid") {
+      const { clientId, paid } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      await supabase.from("invoices")
+        .update({ paid_at: paid ? now.toISOString() : null })
+        .eq("client_id", clientId)
+        .eq("month_key", monthKey);
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Contact submissions: reply ───────────────────────────────────────────
+    if (req.method === "POST" && action === "reply-contact") {
+      const { id, name, email, body: replyBody } = body;
+      if (!id || !name || !email || !replyBody) return NextResponse.json({ error: "id, name, email, and body required" }, { status: 400 });
+
+      const first = (name as string).split(" ")[0];
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:36px 16px 32px;">
+<tr><td align="center">
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+    <tr><td align="center">
+      <img src="https://www.marketyleadgen.com/MarketySquare.png" alt="Markety" width="64" height="64" style="display:block;border-radius:14px;">
+    </td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:540px;background:#f4f4f5;border-radius:20px;overflow:hidden;">
+    <tr><td style="padding:36px 36px 32px;">
+      <p style="margin:0 0 20px;font-size:15px;font-weight:700;color:#0f172a;">Hi, ${first}</p>
+      <div style="font-size:14px;color:#374151;line-height:1.75;white-space:pre-wrap;">${(replyBody as string).replace(/\n/g, "<br>")}</div>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:28px 0 20px;">
+      <p style="margin:0;font-size:14px;color:#374151;">Markety,<br><a href="https://www.marketyleadgen.com" style="color:#5B21F4;text-decoration:none;">www.marketyleadgen.com</a></p>
+    </td></tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;max-width:500px;width:100%;">
+    <tr><td bgcolor="#ede9fe" style="border-radius:50px;padding:14px 28px;text-align:center;">
+      <span style="font-size:14px;color:#4c1d95;">Questions? <a href="mailto:info@marketyleadgen.com" style="color:#5B21F4;text-decoration:none;font-weight:600;">info@marketyleadgen.com</a></span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+      try {
+        await sendEmail({ to: email as string, subject: `Re: Your message to Markety`, html, replyTo: "info@marketyleadgen.com" });
+      } catch (err) {
+        console.error("Reply email error:", err);
+        return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
+      }
+
+      const fullMessage = `Hi, ${first}\n\n${replyBody}\n\nMarkety,\nwww.marketyleadgen.com`;
+      const { error } = await supabase
+        .from("contact_submissions")
+        .update({ replied_at: new Date().toISOString(), reply_message: fullMessage })
+        .eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Send outreach email ───────────────────────────────────────────────────
+    if (req.method === "POST" && action === "send-outreach") {
+      const { to, subject, body: emailBody } = body;
+      if (!to || !subject || !emailBody) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      const signature = `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#6b7280;line-height:1.6;">
+        <span style="color:#333;">Markety</span><br>
+        <a href="mailto:info@marketyleadgen.com" style="color:#6836F4;text-decoration:none;">info@marketyleadgen.com</a><br>
+        <a href="https://www.marketyleadgen.com" style="color:#6836F4;text-decoration:none;">www.marketyleadgen.com</a>
+      </div>`;
+      const html = `<div style="font-family:-apple-system,Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;max-width:560px;">${String(emailBody).replace(/\n/g, "<br>")}${signature}</div>`;
+      try {
+        const info = await sendEmail({ to: to as string, subject: subject as string, html, replyTo: "info@marketyleadgen.com" });
+        appendToSent({ to: to as string, subject: subject as string, html, messageId: info.messageId }).catch(() => {});
+        return NextResponse.json({ success: true });
+      } catch (err) {
+        console.error("send-outreach error:", err);
+        return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+      }
+    }
+
+    // ── Contact submissions: list ────────────────────────────────────────────
+    if (req.method === "GET" && action === "list-contacts") {
+      const { data, error } = await supabase
+        .from("contact_submissions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ contacts: data ?? [] });
+    }
+
+    // ── Content approvals: list ──────────────────────────────────────────────
+    if (req.method === "GET" && action === "list-content") {
+      const { data, error } = await supabase
+        .from("content_approvals")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ items: data ?? [] });
+    }
+
+    // ── Content approvals: update ────────────────────────────────────────────
+    if (req.method === "POST" && action === "update-content-status") {
+      const { id, status, content } = body;
+      if (!id || !status) return NextResponse.json({ error: "id and status required" }, { status: 400 });
+      const updates: Record<string, unknown> = { status };
+      if (content !== undefined) updates.content = content;
+      if (status === "posted") updates.posted_at = new Date().toISOString();
+      const { error } = await supabase.from("content_approvals").update(updates).eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Content: approve and post via Zapier webhook ─────────────────────────
+    if (req.method === "POST" && action === "approve-and-post") {
+      const { id, type, content } = body;
+      if (!id || !type || !content) return NextResponse.json({ error: "id, type, and content required" }, { status: 400 });
+
+      const finalContent = (content as string).trim();
+      const webhookEnvKey: Record<string, string> = {
+        linkedin_post: "LINKEDIN_WEBHOOK_URL",
+        x_post: "X_WEBHOOK_URL",
+      };
+      const webhookUrl = process.env[webhookEnvKey[type as string] ?? ""];
+
+      if (webhookUrl) {
+        const hookRes = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: finalContent, type }),
+        });
+
+        if (!hookRes.ok) {
+          const errText = await hookRes.text();
+          console.error("[Webhook] Post failed:", errText);
+          await supabase.from("content_approvals").update({ status: "approved", content: finalContent }).eq("id", id);
+          return NextResponse.json({ success: true, posted: false, reason: `Webhook error: ${errText}` });
+        }
+
+        await supabase.from("content_approvals").update({
+          status: "posted",
+          content: finalContent,
+          posted_at: new Date().toISOString(),
+        }).eq("id", id);
+        return NextResponse.json({ success: true, posted: true });
+      }
+
+      await supabase.from("content_approvals").update({ status: "approved", content: finalContent }).eq("id", id);
+      return NextResponse.json({ success: true, posted: false, reason: "No webhook configured - post manually" });
+    }
+
+    // ── Content: insert pre-written content ──────────────────────────────────
+    if (req.method === "POST" && action === "insert-content") {
+      const { type, content } = body;
+      if (!type || !content) return NextResponse.json({ error: "type and content required" }, { status: 400 });
+      const validTypes = ["linkedin_post", "x_post", "linkedin_dm", "email"];
+      if (!validTypes.includes(type as string)) return NextResponse.json({ error: "invalid type" }, { status: 400 });
+      const { error } = await supabase.from("content_approvals").insert({
+        type,
+        content: (content as string).trim(),
+        status: "pending",
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Content generation (template bank) ───────────────────────────────────
+    if (req.method === "POST" && action === "generate-content") {
+      const { type } = body;
+      if (!type || !["linkedin_post", "x_post"].includes(type as string)) {
+        return NextResponse.json({ error: "type must be linkedin_post or x_post" }, { status: 400 });
+      }
+
+      const linkedinTemplates = [
+        `Most business owners I talk to have no idea what they're paying per lead.\n\nThey know their retainer. They know their ad spend. But they can't tell me the actual cost of a single qualified enquiry.\n\nWhen we work it out together, the number is almost always shocking.\n\nSometimes it's $80. Sometimes $200. Once it was over $400.\n\nAnd they're still signing the same monthly cheque every month, whether leads come in or not.\n\nThe pay-per-lead model flips this completely. You know exactly what you're paying for every lead before you start. No retainer. No guesswork.\n\nOur average is $2.80 per lead across all the industries we work in.\n\nIf you've never actually calculated your cost per lead, I'd start there. The number will probably surprise you.\n\nWhat does your business pay per enquiry right now?`,
+        `Here's something most marketing agencies don't want you to know:\n\nThe retainer model works in their favour, not yours.\n\nThey get paid whether results come or not. Great month, slow month - same invoice.\n\nPay-per-lead completely removes that misalignment.\n\nWe only earn when you get a qualified lead in your inbox. If campaigns underperform, we take the hit - not you.\n\nFor local businesses especially - contractors, clinics, consultants - this model changes everything.\n\nYou get predictable cost, predictable results, and no risk of burning budget on a slow month.\n\nFirst leads typically arrive within 2 weeks. No long-term contracts.\n\nHonest question: when did you last audit whether your marketing agency is actually accountable for results?`,
+        `No retainer. No long-term contract. No monthly fee.\n\nJust pay for the leads you actually receive.\n\nI know this sounds obvious. But most lead generation agencies still charge you regardless of results.\n\nThe pay-per-lead model only works if we can actually deliver. That accountability is the whole point.\n\nWe work with local businesses across a wide range of industries - tradespeople, clinics, consultants, service companies.\n\nAverage cost: $2.80 per qualified lead.\nTime to first lead: typically under 2 weeks.\nContracts: none.\n\nIf you're currently paying a retainer and not sure what you're actually getting for it, it might be worth running the numbers.\n\nHappy to share what the real cost per lead looks like in your industry if you drop it in the comments.`,
+      ];
+
+      const xTemplates = [
+        `Retainer marketing = paying whether it works or not.\n\nPay-per-lead = paying only when it works.\n\nThe math isn't complicated.`,
+        `Most local businesses overpay for leads by 5-10x. They just don't know it because nobody ever showed them the actual number.`,
+        `$2.80 average cost per lead. No retainer. First leads in 2 weeks. No long-term contracts.\n\nThat's what accountable marketing looks like.`,
+        `Stop paying for clicks. Start paying for leads.`,
+        `Local businesses don't need more followers. They need more phone calls.`,
+      ];
+
+      const pool = type === "linkedin_post" ? linkedinTemplates : xTemplates;
+
+      const { data: recent } = await supabase
+        .from("content_approvals")
+        .select("content")
+        .eq("type", type)
+        .order("created_at", { ascending: false })
+        .limit(pool.length - 1);
+
+      const recentContents = new Set((recent ?? []).map((r: { content: string }) => r.content.slice(0, 60)));
+      const available = pool.filter(t => !recentContents.has(t.slice(0, 60)));
+      const pickFrom = available.length > 0 ? available : pool;
+      const text = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+
+      const { error: dbErr } = await supabase.from("content_approvals").insert({
+        type,
+        content: text,
+        status: "pending",
+      });
+
+      if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
+      return NextResponse.json({ success: true, content: text });
+    }
+
+    // ── Update lead ──────────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "update-lead") {
+      const { leadId, lead_status, lead_notes } = body;
+      if (!leadId) return NextResponse.json({ error: "leadId required" }, { status: 400 });
+      const updates: Record<string, unknown> = {};
+      if (lead_status !== undefined) updates.lead_status = lead_status;
+      if (lead_notes !== undefined) updates.lead_notes = lead_notes;
+      if (Object.keys(updates).length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+      const { error } = await supabase.from("leads").update(updates).eq("id", leadId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Invoice queue ─────────────────────────────────────────────────────────
+    if (req.method === "GET" && action === "invoice-queue") {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("id, name, company, email, price_per_lead, currency, last_invoiced_at, language, token")
+        .order("company", { ascending: true });
+
+      if (!clients) return NextResponse.json({ queue: [] });
+
+      const queue = await Promise.all(clients.map(async (c) => {
+        const { data: leadsData } = await supabase
+          .from("leads")
+          .select("price")
+          .eq("client_id", c.id)
+          .gte("created_at", monthStart.toISOString());
+
+        const leads = leadsData ?? [];
+        const amount = leads.reduce((sum: number, l: { price: number | null }) => sum + (l.price != null ? Number(l.price) : c.price_per_lead), 0);
+
+        const alreadyInvoiced = (() => {
+          if (!c.last_invoiced_at) return false;
+          const d = new Date(c.last_invoiced_at);
+          const now = new Date();
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        })();
+
+        return { ...c, leads_count: leads.length, amount_due: amount, already_invoiced: alreadyInvoiced };
+      }));
+
+      return NextResponse.json({ queue: queue.filter(c => c.leads_count > 0) });
+    }
+
+    // ── Payment reminders ─────────────────────────────────────────────────────
+    if (req.method === "GET" && action === "check-reminders") {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("id, client_id, month_label, amount, currency, sent_at, paid_at, reminder_7d_at, reminder_14d_at, clients(name, company, email)")
+        .is("paid_at", null)
+        .lte("sent_at", sevenDaysAgo)
+        .order("sent_at", { ascending: true });
+
+      return NextResponse.json({ reminders: invoices ?? [] });
+    }
+
+    // ── Send payment reminder ─────────────────────────────────────────────────
+    if (req.method === "POST" && action === "send-payment-reminder") {
+      const { invoiceId, reminderType } = body;
+      if (!invoiceId || !reminderType) return NextResponse.json({ error: "invoiceId and reminderType required" }, { status: 400 });
+
+      const { data: inv } = await supabase
+        .from("invoices")
+        .select("id, client_id, month_label, amount, currency, stripe_link, clients(name, company, email, language, token)")
+        .eq("id", invoiceId)
+        .single();
+
+      if (!inv) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      const client = Array.isArray(inv.clients) ? inv.clients[0] : inv.clients as { name: string; company: string; email: string; language: string; token: string };
+
+      const first = client.name.split(" ")[0];
+      const isDa = (client.language ?? "en") === "da";
+      const dashboardUrl = `https://marketyleadgen.com/dashboard/${client.token}`;
+      const payUrl = (inv as { stripe_link?: string | null }).stripe_link ?? dashboardUrl;
+
+      const html = `<!DOCTYPE html>
+<html lang="${client.language ?? "en"}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:36px 16px 32px;">
+<tr><td align="center">
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+    <tr><td align="center">
+      <img src="https://www.marketyleadgen.com/MarketySquare.png" alt="Markety" width="64" height="64" style="display:block;border-radius:14px;">
+    </td></tr>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:540px;background:#f4f4f5;border-radius:20px;overflow:hidden;">
+    <tr><td style="padding:36px 36px 32px;">
+      <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;color:#0f172a;">${isDa ? `Påmindelse: Faktura for ${inv.month_label}` : `Reminder: Invoice for ${inv.month_label}`}</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#64748b;line-height:1.6;">${isDa ? `Hej ${first}, vi har endnu ikke modtaget betaling for din faktura for ${inv.month_label}. Beløbet er` : `Hi ${first}, we haven't received payment for your ${inv.month_label} invoice yet. The amount due is`} <strong style="color:#0f172a;">${money(Number(inv.amount), inv.currency)}</strong>.</p>
+      <table cellpadding="0" cellspacing="0" border="0">
+        <tr><td bgcolor="#5B21F4" style="border-radius:50px;">
+          <a href="${payUrl}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">${isDa ? "Betal nu" : "Pay now"}</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;max-width:500px;width:100%;">
+    <tr><td bgcolor="#ede9fe" style="border-radius:50px;padding:14px 28px;text-align:center;">
+      <span style="font-size:14px;color:#4c1d95;">${isDa ? "Spørgsmål? Svar på denne email." : "Questions? Just reply to this email."}</span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+      if (!process.env.SPACEMAIL_PASSWORD) return NextResponse.json({ error: "Email not configured" }, { status: 500 });
+
+      await sendEmail({
+        to: client.email,
+        subject: isDa ? `Påmindelse: Faktura ${inv.month_label} - ${money(Number(inv.amount), inv.currency)}` : `Payment reminder: ${inv.month_label} invoice - ${money(Number(inv.amount), inv.currency)}`,
+        html,
+        replyTo: "info@marketyleadgen.com",
+      });
+
+      const reminderField = reminderType === "7d" ? "reminder_7d_at" : "reminder_14d_at";
+      await supabase.from("invoices").update({ [reminderField]: new Date().toISOString() }).eq("id", invoiceId);
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Bulk approve content ──────────────────────────────────────────────────
+    if (req.method === "POST" && action === "bulk-approve-content") {
+      const { ids } = body;
+      if (!Array.isArray(ids) || ids.length === 0) return NextResponse.json({ error: "ids array required" }, { status: 400 });
+      const { error } = await supabase.from("content_approvals")
+        .update({ status: "approved" })
+        .in("id", ids);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Update contact pipeline status ────────────────────────────────────────
+    if (req.method === "POST" && action === "update-contact-pipeline") {
+      const { id, pipeline_status } = body;
+      if (!id || !pipeline_status) return NextResponse.json({ error: "id and pipeline_status required" }, { status: 400 });
+      const { error } = await supabase.from("contact_submissions").update({ pipeline_status }).eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Update onboarding checklist steps ────────────────────────────────────
+    if (req.method === "POST" && action === "update-onboarding-steps") {
+      const { clientId, steps } = body;
+      if (!clientId || !steps) return NextResponse.json({ error: "clientId and steps required" }, { status: 400 });
+      const { error } = await supabase.from("clients").update({ onboarding_steps: steps }).eq("id", clientId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Update client deal value ──────────────────────────────────────────────
+    if (req.method === "POST" && action === "update-deal-value") {
+      const { clientId, deal_value } = body;
+      if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+      const val = deal_value === null || deal_value === "" ? null : Number(deal_value);
+      const { error } = await supabase.from("clients").update({ deal_value: val }).eq("id", clientId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Nimble: research company website ─────────────────────────────────────
+    if (req.method === "POST" && action === "research-company") {
+      const { homepage, companyName, industry, lang } = body;
+      if (!homepage) return NextResponse.json({ error: "homepage required" }, { status: 400 });
+
+      const nimbleKey = process.env.NIMBLE_API_KEY;
+      if (!nimbleKey) return NextResponse.json({ error: "Nimble API key not configured" }, { status: 500 });
+
+      let siteContent = "";
+      try {
+        const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+          },
+          body: JSON.stringify({
+            url: homepage,
+            render: false,
+            format: "markdown",
+            country: "DK",
+          }),
+        });
+        const nimbleData = await nimbleRes.json();
+        siteContent = nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? nimbleData?.data?.html ?? "";
+        siteContent = siteContent.slice(0, 3000);
+      } catch (e) {
+        return NextResponse.json({ error: "Failed to fetch company website", details: String(e) }, { status: 500 });
+      }
+
+      if (!siteContent) return NextResponse.json({ error: "Could not extract content from website" }, { status: 422 });
+
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+      const langNames: Record<string, string> = { da: "Danish", en: "English", de: "German", sv: "Swedish", no: "Norwegian" };
+      const langName = langNames[lang as string] ?? "Danish";
+
+      const promptText = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received — no fixed monthly price. First 30 days are free.
+
+I scraped the homepage of a ${industry ?? "local business"} called "${companyName ?? "this company"}". Here is what their website says:
+
+---
+${siteContent}
+---
+
+Write a short, personal cold email in ${langName}. Rules:
+- 3-4 short paragraphs max
+- Reference something SPECIFIC from their website in the first or second line
+- Mention Markety's pay-per-lead model and that the first 30 days are free
+- Conversational tone, not corporate
+- Do NOT use placeholders like [name]
+- End with a soft CTA like "Reply if this sounds interesting"
+- Return ONLY the email body text, no subject line`;
+
+      const msg = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        messages: [{ role: "user", content: promptText }],
+      });
+
+      const personalizedBody = (msg.content[0] as { type: string; text: string }).text.trim();
+      return NextResponse.json({ success: true, body: personalizedBody });
+    }
+
+    if (req.method === "POST" && action === "delete-contact") {
+      const { id } = body;
+      if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+      const { error } = await supabase.from("contact_submissions").delete().eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (req.method === "POST" && action === "delete-content") {
+      const { id } = body;
+      if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+      const { error } = await supabase.from("content_approvals").delete().eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (err) {
+    console.error("[ADMIN] Unexpected error:", err);
+    if (process.env.SPACEMAIL_PASSWORD) {
+      sendEmail({
+        to: "info@marketyleadgen.com",
+        subject: `[Markety Error] Admin API error`,
+        html: `<pre style="font-family:monospace;font-size:12px;padding:16px;">${String(err)}</pre>`,
+      }).catch(() => {});
+    }
+    return NextResponse.json({ error: "Internal server error", details: String(err) }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  return handleRequest(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleRequest(req);
+}
