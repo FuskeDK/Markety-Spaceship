@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
   Users, TrendingUp, Calendar, DollarSign, Mail, Phone, Lock, Eye, EyeOff,
-  Download, Search, X, Copy, Check, ChevronUp, ChevronDown, ArrowUpDown,
+  Download, Search, X, Copy, Check, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowUpDown,
   LayoutDashboard, BarChart3, Receipt, Megaphone, Settings,
   ArrowUp, ArrowDown, KeyRound, Headphones, Activity, CircleDot,
   Package, ShoppingBag, Plus, Pencil, Trash2, ImageIcon, AlertCircle, RefreshCw,
@@ -522,6 +522,7 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [tab, setTab] = useState<"overview" | "analytics" | "invoices" | "campaigns" | "account" | "beskeder" | "produkter" | "ordrer">("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [hasNewBeskeder, setHasNewBeskeder] = useState(false);
@@ -547,6 +548,10 @@ const Dashboard = () => {
       .catch(() => setError("Dashboard not found."))
       .finally(() => { if (!silent) setRefreshing(false); });
   }, [token]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) setSidebarCollapsed(true);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -693,11 +698,11 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+      <aside className={`${sidebarCollapsed ? "w-14" : "w-56"} bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-200`}>
         {/* Logo + company */}
-        <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-100 shrink-0 min-w-0">
+        <div className={`h-16 flex items-center border-b border-gray-100 shrink-0 overflow-hidden ${sidebarCollapsed ? "justify-center px-0" : "gap-2.5 px-5 min-w-0"}`}>
           <img src="/markety-logo.png" alt="Markety" className="h-5 w-auto shrink-0" />
-          <span className="text-xs text-gray-500 font-medium truncate">{client.company}</span>
+          {!sidebarCollapsed && <span className="text-xs text-gray-500 font-medium truncate">{client.company}</span>}
         </div>
 
         {/* Nav */}
@@ -706,14 +711,15 @@ const Dashboard = () => {
             <button
               key={tb.id}
               onClick={() => handleTabClick(tb.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+              title={sidebarCollapsed ? tb.label : undefined}
+              className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5 text-left"} ${
                 tab === tb.id ? "text-purple-700" : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               }`}
               style={tab === tb.id ? { background: "hsl(252 89% 58% / 0.08)" } : {}}
             >
               <tb.icon className={`w-4 h-4 shrink-0 ${tab === tb.id ? "text-purple-600" : ""}`} />
-              <span className="flex-1">{tb.label}</span>
-              {tb.blink && tab !== tb.id && (
+              {!sidebarCollapsed && <span className="flex-1">{tb.label}</span>}
+              {!sidebarCollapsed && tb.blink && tab !== tb.id && (
                 <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
               )}
             </button>
@@ -723,16 +729,27 @@ const Dashboard = () => {
         {/* Bottom */}
         <div className="px-2 py-3 border-t border-gray-100 space-y-0.5 shrink-0">
           <button
+            onClick={() => setSidebarCollapsed(c => !c)}
+            className={`w-full flex items-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5"}`}
+            title={sidebarCollapsed ? "Expand" : "Collapse"}
+          >
+            {sidebarCollapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
+            {!sidebarCollapsed && <span className="flex-1">Collapse</span>}
+          </button>
+          <button
             onClick={() => fetchData()}
             disabled={refreshing}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40"
+            title={sidebarCollapsed ? t(lang, "refresh") : undefined}
+            className={`w-full flex items-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40 ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5"}`}
           >
             <RefreshCw className={`w-4 h-4 shrink-0 ${refreshing ? "animate-spin" : ""}`} />
-            {t(lang, "refresh")}
+            {!sidebarCollapsed && t(lang, "refresh")}
           </button>
-          <div className="px-3 py-2">
-            <p className="text-xs text-gray-400 truncate">{t(lang, "clientSince", { date: formatDate(client.created_at, locale) })}</p>
-          </div>
+          {!sidebarCollapsed && (
+            <div className="px-3 py-2">
+              <p className="text-xs text-gray-400 truncate">{t(lang, "clientSince", { date: formatDate(client.created_at, locale) })}</p>
+            </div>
+          )}
         </div>
       </aside>
 
