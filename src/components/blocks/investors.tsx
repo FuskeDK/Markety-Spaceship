@@ -7,7 +7,7 @@ const investors = [
     image: "/investors/1.webp",
   },
 ];
-s
+
 export function Investors() {
   return (
     <section className="container max-w-5xl py-12">
