@@ -105,7 +105,7 @@ export const Navbar = ({ locale = "en" }: { locale?: string }) => {
                     className={cn(
                       "relative bg-transparent px-1.5 text-base font-semibold transition-opacity hover:opacity-75",
                       pathname === link.href
-                        ? "text-purple-600 after:absolute after:bottom-[-3px] after:left-0 after:h-[2px] after:w-full after:rounded-full after:bg-purple-500"
+                        ? "text-purple-600"
                         : "hover:opacity-75",
                     )}
                   >
