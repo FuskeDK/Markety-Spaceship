@@ -144,10 +144,10 @@ export function ContactForm() {
         <FormField
           control={form.control}
           name="company"
-          rules={{ required: false }}
+          rules={{ required: true }}
           render={({ field }) => (
             <FormItem className="w-full">
-              <FormLabel>Company name </FormLabel>
+              <FormLabel>Company name * </FormLabel>
               <FormControl>
                 <Input
                   type="text"
@@ -167,7 +167,7 @@ export function ContactForm() {
 
         <FormField
           control={form.control}
-          rules={{ required: false }}
+          rules={{ required: true }}
           name="employees"
           render={({ field }) => {
             const options = [
@@ -178,7 +178,7 @@ export function ContactForm() {
             ];
             return (
               <FormItem className="w-full">
-                <FormLabel>Number of employees </FormLabel>
+                <FormLabel>Number of employees * </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="w-full">
