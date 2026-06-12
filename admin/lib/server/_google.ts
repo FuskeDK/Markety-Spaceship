@@ -1,5 +1,5 @@
 // Google People API helper for saving contacts to Google Contacts.
-// Currently a standalone utility — not wired into any active API route but
+// Currently a standalone utility - not wired into any active API route but
 // available for future outreach workflows. Requires GOOGLE_CLIENT_ID,
 // GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN env vars; silently
 // no-ops if any are missing.

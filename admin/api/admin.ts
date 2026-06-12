@@ -2,9 +2,9 @@
 // file via an `action` query/body param rather than separate routes.
 // Authentication: most actions require the x-admin-password header matching
 // ADMIN_PASSWORD env var (enforced by isAuthed()). Exceptions:
-//   - "login"         — validates the password and returns success/failure
-//   - "find-companies"— public CVR/company lookup (no auth)
-//   - "cron-*"        — authenticated by CRON_SECRET Bearer token (Vercel cron)
+//   - "login"         - validates the password and returns success/failure
+//   - "find-companies"- public CVR/company lookup (no auth)
+//   - "cron-*"        - authenticated by CRON_SECRET Bearer token (Vercel cron)
 //
 // Key action groups:
 //   Clients:    clients (list), add-client, update-client, delete-client,
@@ -412,7 +412,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           line_items: [{
             price_data: {
               currency: (client.currency || "USD").toLowerCase(),
-              product_data: { name: `${leads} leads – ${monthName}` },
+              product_data: { name: `${leads} leads - ${monthName}` },
               unit_amount: Math.round(amountDue * 100),
             },
             quantity: 1,
@@ -792,7 +792,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         line_items: [{
           price_data: {
             currency: (client.currency || "USD").toLowerCase(),
-            product_data: { name: `${leads} leads – ${monthName}` },
+            product_data: { name: `${leads} leads - ${monthName}` },
             unit_amount: Math.round(amountDue * 100),
           },
           quantity: 1,
@@ -1321,7 +1321,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const langNames: Record<string, string> = { da: "Danish", en: "English", de: "German", sv: "Swedish", no: "Norwegian" };
     const langName = langNames[lang as string] ?? "Danish";
 
-    const prompt = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received — no fixed monthly price. First 30 days are free.
+    const prompt = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received - no fixed monthly price. First 30 days are free.
 
 I scraped the homepage of a ${industry ?? "local business"} called "${companyName ?? "this company"}". Here is what their website says:
 
@@ -1331,10 +1331,10 @@ ${siteContent}
 
 Write a short, personal cold email in ${langName}. Rules:
 - 3-4 short paragraphs max
-- Reference something SPECIFIC from their website (a service, their tagline, a specific thing they do) in the first or second line — make it feel like you actually looked at their business
+- Reference something SPECIFIC from their website (a service, their tagline, a specific thing they do) in the first or second line - make it feel like you actually looked at their business
 - Mention Markety's pay-per-lead model and that the first 30 days are free
 - Conversational tone, not corporate
-- Do NOT use placeholders like [name] — just write naturally without a name if you don't have one
+- Do NOT use placeholders like [name] - just write naturally without a name if you don't have one
 - End with a soft CTA like "Reply if this sounds interesting" or similar
 - Return ONLY the email body text, no subject line, no "Subject:", no greeting prefix`;
 

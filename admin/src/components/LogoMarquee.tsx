@@ -1,5 +1,5 @@
 // Horizontally scrolling logo strip showing tool/partner logos.
-// Pure CSS animation (marquee keyframe) — no JS scroll logic.
+// Pure CSS animation (marquee keyframe) - no JS scroll logic.
 // Logos are hardcoded SVGs. Client company names from useCompanyNames are
 // NOT shown here; this is a tools/integrations marquee.
 // Used in: src/pages/Index.tsx.

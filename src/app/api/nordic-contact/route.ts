@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   try {
     await sendEmail({
       to: email,
-      subject: "Vi har modtaget din besked – Nordic Solfilm",
+      subject: "Vi har modtaget din besked - Nordic Solfilm",
       html: customerHtml,
     });
 

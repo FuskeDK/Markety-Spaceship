@@ -1,10 +1,10 @@
 // IMAP inbox reader for the admin panel email tab. Connects directly to
 // the Spacemail inbox (mail.spacemail.com:993) using ImapFlow.
 // Supports three operations (all require x-admin-password header):
-//   GET (no uid)     — list the last 50 emails (uid, subject, from, date, seen flag)
-//   GET ?uid=<n>     — fetch and parse the full HTML/text body of one email
-//   DELETE { uid }   — delete one message by UID
-//   DELETE { all }   — clear the entire inbox
+//   GET (no uid)     - list the last 50 emails (uid, subject, from, date, seen flag)
+//   GET ?uid=<n>     - fetch and parse the full HTML/text body of one email
+//   DELETE { uid }   - delete one message by UID
+//   DELETE { all }   - clear the entire inbox
 // Used by: src/pages/Admin.tsx (Emails tab).
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { ImapFlow } from "imapflow";

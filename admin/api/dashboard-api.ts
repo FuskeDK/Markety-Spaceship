@@ -1,4 +1,4 @@
-// Client-facing dashboard API — the only backend the client dashboard talks to.
+// Client-facing dashboard API - the only backend the client dashboard talks to.
 // Auth model: no login to the admin panel; instead every client has a unique
 // URL token (/dashboard/:token). Actions that mutate data also require the
 // client to have set a password (claimed the dashboard) and be logged in
@@ -10,15 +10,15 @@
 // GET /api/dashboard-api?token=<t>&resource=products → product list for webshop
 //
 // POST actions (all require token; some also require password):
-//   claim               — first-time password setup (hashed with pbkdf2)
-//   login               — verify password, rate-limited per IP
-//   change-password     — update password after verifying current one
-//   update-lead-status  — client marks a lead as contacted/converted/lost
-//   set-deal-value      — client inputs their deal value for ROI calc
-//   create-order        — webshop checkout; creates lead + order, sends
+//   claim               - first-time password setup (hashed with pbkdf2)
+//   login               - verify password, rate-limited per IP
+//   change-password     - update password after verifying current one
+//   update-lead-status  - client marks a lead as contacted/converted/lost
+//   set-deal-value      - client inputs their deal value for ROI calc
+//   create-order        - webshop checkout; creates lead + order, sends
 //                          confirmation email, checks lead cap
-//   update-order        — mark order handled/pending
-//   add-product / update-product / delete-product — webshop catalogue mgmt
+//   update-order        - mark order handled/pending
+//   add-product / update-product / delete-product - webshop catalogue mgmt
 //
 // Used by: src/pages/Dashboard.tsx.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         price: (client as { price_per_lead: number }).price_per_lead,
       });
 
-      // Check lead cap after inserting — pause site if cap reached
+      // Check lead cap after inserting - pause site if cap reached
       if ((client as { lead_cap: number | null }).lead_cap) {
         const { count } = await supabase
           .from("leads")

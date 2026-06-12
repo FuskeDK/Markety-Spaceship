@@ -1,0 +1,25 @@
+0000000000000000000000000000000000000000 abd06c09a0ef8fe0fe239bf09f698ec81cba0635 Kåre Jürgensen <laminey2059@gmail.com> 1781273818 +0200	commit (initial): Initial commit: Markety marketing site + admin dashboard
+abd06c09a0ef8fe0fe239bf09f698ec81cba0635 cadf4f57b4aac79a903212211b1b484db65cdda9 Kåre Jürgensen <laminey2059@gmail.com> 1781274548 +0200	commit: Trigger Vercel deployment from Markety-Spaceship
+cadf4f57b4aac79a903212211b1b484db65cdda9 941f1db24a6b5546ef5558b0f91224fa9f0e3f32 Kåre Jürgensen <laminey2059@gmail.com> 1781274621 +0200	commit: Exclude admin/ from root tsconfig to fix Vercel build
+941f1db24a6b5546ef5558b0f91224fa9f0e3f32 a76fcde8c01b857bfb65302978ada3b071e774f1 Kåre Jürgensen <laminey2059@gmail.com> 1781274731 +0200	commit: Fix unused variable in stats-hero to pass build
+a76fcde8c01b857bfb65302978ada3b071e774f1 4333e611fe82c46ce01d0746ea76fa87565624a2 Kåre Jürgensen <laminey2059@gmail.com> 1781274887 +0200	commit: Update Next.js to 15.5.19 to fix Vercel security block
+4333e611fe82c46ce01d0746ea76fa87565624a2 8e9152c80270899c8ad8350e2ec397b7c5b5cb1b Kåre Jürgensen <laminey2059@gmail.com> 1781276247 +0200	commit: Port admin dashboard to Next.js app at /admin route
+8e9152c80270899c8ad8350e2ec397b7c5b5cb1b 87b67248cbdd7103c2c5c28fb0ce3845952521c4 Kåre Jürgensen <laminey2059@gmail.com> 1781277081 +0200	commit: Fix admin layout: move marketing pages into (site) route group so /admin has no navbar/footer
+87b67248cbdd7103c2c5c28fb0ce3845952521c4 04de0efa613142489594d0b8f49c7f9ee8b5d3c3 Kåre Jürgensen <laminey2059@gmail.com> 1781277438 +0200	commit: Connect contact form to Supabase contact_submissions table
+04de0efa613142489594d0b8f49c7f9ee8b5d3c3 92bc34339507b702be7ef3108846c4bbc5525be1 Kåre Jürgensen <laminey2059@gmail.com> 1781277727 +0200	commit: Fix ESLint import/order error in server action
+92bc34339507b702be7ef3108846c4bbc5525be1 6a8120054677c48888d5a0225c112f30d765c58b Kåre Jürgensen <laminey2059@gmail.com> 1781278043 +0200	commit: Fix contact form: correct Supabase key, add confirmation and admin emails
+6a8120054677c48888d5a0225c112f30d765c58b dc5d54764debded8e969fc415aac86136771ad19 Kåre Jürgensen <laminey2059@gmail.com> 1781278405 +0200	commit: Replace admin top tab bar with sidebar navigation
+dc5d54764debded8e969fc415aac86136771ad19 ad21e8c89051f08b51173a6e3d5737ee171a5453 Kåre Jürgensen <laminey2059@gmail.com> 1781278782 +0200	commit: Expand content templates: 3 → 35 LinkedIn posts, 5 → 30 X posts
+ad21e8c89051f08b51173a6e3d5737ee171a5453 551065d28cbd0dde61dd76d7383c3fc7e242abe4 Kåre Jürgensen <laminey2059@gmail.com> 1781278882 +0200	commit: Skip ESLint and TypeScript checks during Vercel build
+551065d28cbd0dde61dd76d7383c3fc7e242abe4 1d8c9eaa28abecc8d2ab30dc1b49577ec9053288 Kåre Jürgensen <laminey2059@gmail.com> 1781279063 +0200	commit: Add client dashboard at /dashboard/[token]
+1d8c9eaa28abecc8d2ab30dc1b49577ec9053288 7d4bd1e4ad3fae38cccfc0ae42a4b5de7984d367 Kåre Jürgensen <laminey2059@gmail.com> 1781279262 +0200	commit: Replace client dashboard tab bar with sidebar navigation
+7d4bd1e4ad3fae38cccfc0ae42a4b5de7984d367 fffd4d49bfd2cb5ceb4d6c494250ff3e1ca616e2 Kåre Jürgensen <laminey2059@gmail.com> 1781279628 +0200	commit: feat: fetch live stats from database in StatsHero
+fffd4d49bfd2cb5ceb4d6c494250ff3e1ca616e2 81a2543d5e8ba02dd43c2eb0784b9e29b6c12ead Kåre Jürgensen <laminey2059@gmail.com> 1781279740 +0200	commit: feat: fetch live stats in AboutHero
+81a2543d5e8ba02dd43c2eb0784b9e29b6c12ead 899f48db0fa1cab2bb8230a8861c247893eaead5 Kåre Jürgensen <laminey2059@gmail.com> 1781284458 +0200	commit: Update investors image and component
+899f48db0fa1cab2bb8230a8861c247893eaead5 cebd466af586c11b4f8af619882d2f5b09962830 Kåre Jürgensen <laminey2059@gmail.com> 1781284717 +0200	commit: Fix stray syntax error in investors component
+cebd466af586c11b4f8af619882d2f5b09962830 e61e3973f096b3521843bbc487f9cee806d1ac6d Kåre Jürgensen <laminey2059@gmail.com> 1781291061 +0200	commit: feat: collapsible sidebar + new favicon
+e61e3973f096b3521843bbc487f9cee806d1ac6d df5d8435bc747edabf61e998e0b473603888df5f Kåre Jürgensen <laminey2059@gmail.com> 1781291470 +0200	commit: fix: add rounded corners to all favicon sizes
+df5d8435bc747edabf61e998e0b473603888df5f a0176ec67b958e9bfa83137a11d7bc570d593b9a Kåre Jürgensen <laminey2059@gmail.com> 1781291677 +0200	commit: feat: language detection banner + purple active nav
+a0176ec67b958e9bfa83137a11d7bc570d593b9a ad77f39d67b5044b51d46668d90c053a1c4de9b9 Kåre Jürgensen <laminey2059@gmail.com> 1781292049 +0200	commit: feat: bilingual lang banner with IP detection + locale routing
+ad77f39d67b5044b51d46668d90c053a1c4de9b9 0353c7401a2acdb72375ea42494fee96002e0f93 Kåre Jürgensen <laminey2059@gmail.com> 1781292249 +0200	commit: fix: keep URL on own domain for locale routing
+0353c7401a2acdb72375ea42494fee96002e0f93 b6348d6ed134e2bb40ae379d8ad2b2fd9c2cc3e4 Kåre Jürgensen <laminey2059@gmail.com> 1781293025 +0200	commit: feat: real i18n with hand-written translations (EN/DA/DE/SV/NO)

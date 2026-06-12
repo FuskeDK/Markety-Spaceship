@@ -1,4 +1,4 @@
-// Public stats endpoint — powers the social-proof numbers shown on the
+// Public stats endpoint - powers the social-proof numbers shown on the
 // Markety marketing website (homepage, about page).
 // Returns: leadsThisYear, companiesCount, avgDaysToFirstLead, clientRetention.
 // No auth required; all values are aggregate and non-identifying.

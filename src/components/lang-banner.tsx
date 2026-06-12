@@ -81,6 +81,7 @@ export function LangBanner() {
   };
 
   const switchLang = () => {
+    setEntry(null);
     localStorage.setItem(DISMISSED_KEY, "1");
     const base = window.location.pathname === "/" ? "" : window.location.pathname;
     router.push(`/${entry!.locale}${base}`);

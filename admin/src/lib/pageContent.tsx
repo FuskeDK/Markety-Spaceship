@@ -23,11 +23,11 @@ export const defaultPrivacy: Section[] = [
   },
   {
     title: "4. Third-party processors",
-    body: "We use the following third-party services to operate our website and business. Each acts as a data processor on our behalf:\n\n- Supabase (USA) — database and backend infrastructure. Data is stored in EU data centres where available.\n- Resend (USA) — transactional email delivery (confirmation emails, notifications).\n- HubSpot (USA) — CRM used to manage contact enquiries.\n- Google Analytics / Google Tag Manager (USA) — website analytics, only loaded with your consent.\n- Vercel (USA) — website hosting and serverless functions.\n\nAll US-based processors operate under the EU–US Data Privacy Framework or Standard Contractual Clauses, which provide appropriate safeguards for transfers of personal data outside the EU/EEA.",
+    body: "We use the following third-party services to operate our website and business. Each acts as a data processor on our behalf:\n\n- Supabase (USA) - database and backend infrastructure. Data is stored in EU data centres where available.\n- Resend (USA) - transactional email delivery (confirmation emails, notifications).\n- HubSpot (USA) - CRM used to manage contact enquiries.\n- Google Analytics / Google Tag Manager (USA) - website analytics, only loaded with your consent.\n- Vercel (USA) - website hosting and serverless functions.\n\nAll US-based processors operate under the EU-US Data Privacy Framework or Standard Contractual Clauses, which provide appropriate safeguards for transfers of personal data outside the EU/EEA.",
   },
   {
     title: "5. International data transfers",
-    body: "Some of the services listed above transfer data to countries outside the European Economic Area (EEA), including the United States. Where this occurs, we rely on:\n- The EU–US Data Privacy Framework (where the processor is certified), or\n- Standard Contractual Clauses (SCCs) approved by the European Commission.\n\nYou can request a copy of the applicable transfer safeguards by contacting us at info@marketyleadgen.com.",
+    body: "Some of the services listed above transfer data to countries outside the European Economic Area (EEA), including the United States. Where this occurs, we rely on:\n- The EU-US Data Privacy Framework (where the processor is certified), or\n- Standard Contractual Clauses (SCCs) approved by the European Commission.\n\nYou can request a copy of the applicable transfer safeguards by contacting us at info@marketyleadgen.com.",
   },
   {
     title: "6. Cookies",

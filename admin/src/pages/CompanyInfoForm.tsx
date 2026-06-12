@@ -1,7 +1,7 @@
 // New-client onboarding form. Reached via a personal link like
 // /company-info/:token where token is a pre-created contact_token.
 // On mount, calls api/check-submission.ts to see if this token has already
-// been submitted — if yes, redirects to /company-info-done.
+// been submitted - if yes, redirects to /company-info-done.
 // On submit, POSTs to api/company-info.ts which auto-creates the client in
 // Supabase and emails both admin and the prospect their dashboard link.
 // The :token param is optional; if absent the form still works but no

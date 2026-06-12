@@ -18,7 +18,7 @@ export const Features = ({ t }: { t: SiteStrings }) => {
           </span>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-4xl items-center gap-3 md:gap-0 lg:mt-24 lg:grid-cols-2">
+        <div className="mx-auto mt-10 grid max-w-4xl items-start gap-3 md:gap-6 lg:mt-24 lg:grid-cols-2">
           <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
             {t.features.heading}
           </h2>

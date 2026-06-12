@@ -1,4 +1,4 @@
-// Client-facing dashboard — the only page clients see after onboarding.
+// Client-facing dashboard - the only page clients see after onboarding.
 // Auth: no traditional login session. Each client has a unique URL token
 // (/dashboard/:token). First visit prompts them to "claim" the dashboard
 // by setting a password; subsequent visits require that password.
@@ -9,13 +9,13 @@
 // are POSTed to the same endpoint.
 //
 // Tab structure (all defined as local functions in this file):
-//   OverviewTab    — lead list, stats cards, CSV export
-//   AnalyticsTab   — monthly trend chart, source breakdown, day-of-week chart,
+//   OverviewTab    - lead list, stats cards, CSV export
+//   AnalyticsTab   - monthly trend chart, source breakdown, day-of-week chart,
 //                    ROI calculator (uses client.deal_value)
-//   InvoicesTab    — invoice history, Stripe payment links
-//   CampaignsTab   — active campaigns + campaign manager info
-//   AccountTab     — change password
-//   WebshopTab     — product catalogue + order management (if client has products)
+//   InvoicesTab    - invoice history, Stripe payment links
+//   CampaignsTab   - active campaigns + campaign manager info
+//   AccountTab     - change password
+//   WebshopTab     - product catalogue + order management (if client has products)
 //
 // i18n: strings come from src/lib/translations.ts (English + Danish).
 // The client's `language` field in Supabase determines which strings to use.
@@ -164,7 +164,7 @@ function buildSourceData(leads: Lead[]) {
 }
 
 function buildDayOfWeekData(leads: Lead[], locale: string) {
-  // Jan 1–7 2024 = Mon–Sun
+  // Jan 1-7 2024 = Mon-Sun
   const dayNames = Array.from({ length: 7 }, (_, i) =>
     new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday: "short" })
   );
@@ -291,7 +291,7 @@ function ContactCard({ c, isOpen, onToggle, reply, onReplyChange, onSend, sendin
         onClick={onToggle}
         className="w-full px-5 py-4 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 mb-0.5">{c.name || "–"}</p>
+          <p className="text-sm font-semibold text-gray-900 mb-0.5">{c.name || "-"}</p>
           {c.message && <p className="text-xs text-gray-400 truncate">{c.message}</p>}
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -929,7 +929,7 @@ function OverviewTab({ leads, client, lang, locale, token, onLeadStatusUpdate }:
                   transition={{ delay: Math.min(i * 0.02, 0.4) }}
                   className="px-4 py-3 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-800">{lead.name ?? "–"}</p>
+                    <p className="text-sm font-medium text-gray-800">{lead.name ?? "-"}</p>
                     <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
                       {formatDate(lead.created_at, locale)}
                       {isNew(lead.created_at) && <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />}
@@ -1037,7 +1037,7 @@ function AnalyticsTab({ leads, lang, locale }: { leads: Lead[]; lang: string; lo
           trend={monthDiff > 0 ? "up" : monthDiff < 0 ? "down" : "neutral"} />
         <InsightCard label={t(lang, "lastMonth")} value={String(lastMonthLeads)} sub={t(lang, "previousPeriod")} />
         <InsightCard label={t(lang, "avgPerDay")} value={avgPerDay30.toFixed(1)} sub={t(lang, "last30Days")} />
-        <InsightCard label={t(lang, "bestDay")} value={bestDay.leads > 0 ? bestDay.day : "–"}
+        <InsightCard label={t(lang, "bestDay")} value={bestDay.leads > 0 ? bestDay.day : "-"}
           sub={bestDay.leads > 0 ? t(lang, "leadsTotal", { n: String(bestDay.leads) }) : t(lang, "notEnoughData")} />
       </div>
 
@@ -1245,7 +1245,7 @@ function CampaignsTab({ leads, client, lang, locale }: { leads: Lead[]; client: 
           <div>
             <p className="text-xs text-gray-400 mb-0.5">{t(lang, "pacingVsLast")}</p>
             <p className={`text-xl font-bold ${pacing === null ? "text-gray-400" : pacing >= 100 ? "text-green-600" : pacing >= 75 ? "text-amber-500" : "text-red-500"}`}>
-              {pacing === null ? "–" : `${pacing}%`}
+              {pacing === null ? "-" : `${pacing}%`}
             </p>
           </div>
           <div>
@@ -1255,7 +1255,7 @@ function CampaignsTab({ leads, client, lang, locale }: { leads: Lead[]; client: 
                 ? daysSinceLastLead === 0 ? t(lang, "today")
                 : daysSinceLastLead === 1 ? t(lang, "yesterday")
                 : t(lang, "daysAgo", { n: String(daysSinceLastLead) })
-                : "–"}
+                : "-"}
             </p>
           </div>
         </div>
@@ -1653,7 +1653,7 @@ function OrdrerTab({ orders, token, onOrderUpdated }: {
           className="w-full px-4 sm:px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold text-gray-900">{o.customer_name || "–"}</p>
+              <p className="text-sm font-semibold text-gray-900">{o.customer_name || "-"}</p>
               {isHandled
                 ? <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium"><Check className="w-3 h-3" />Behandlet</span>
                 : <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium"><CircleDot className="w-3 h-3" />Afventer</span>}

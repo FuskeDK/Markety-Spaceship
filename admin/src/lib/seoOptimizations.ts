@@ -1,7 +1,7 @@
 // Runtime SEO/performance helpers injected once on app mount (App.tsx).
 // initializeSEOOptimizations: adds dns-prefetch/preload hints for Google Fonts
 // and prefetch links for /about and /contact to warm up the next navigation.
-// addOrganizationSchema: injects a JSON-LD Organization schema block —
+// addOrganizationSchema: injects a JSON-LD Organization schema block -
 // call this from Index.tsx if structured data is needed.
 export const initializeSEOOptimizations = () => {
   const addLinkHint = (rel: 'preload' | 'prefetch' | 'dns-prefetch', href: string, as?: string) => {

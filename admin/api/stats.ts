@@ -1,9 +1,9 @@
-// Public stats endpoint — powers the social-proof numbers shown on the
+// Public stats endpoint - powers the social-proof numbers shown on the
 // Markety marketing website (homepage, about page).
 // Returns: leadsThisYear, companiesCount, avgDaysToFirstLead, clientRetention.
 // No auth required; all values are aggregate and non-identifying.
 // Read by: src/hooks/useLeadsThisYear.ts, useCompaniesCount.ts,
-// useAvgDaysToFirstLead.ts, useClientRetention.ts — each hook fetches this
+// useAvgDaysToFirstLead.ts, useClientRetention.ts - each hook fetches this
 // same endpoint and picks its own field. The data is also used by admin.ts
 // action "stats" (authenticated, more detailed monthly breakdown).
 import type { VercelRequest, VercelResponse } from "@vercel/node";

@@ -4,7 +4,7 @@
 //   1. Saves the submission to the `contact_submissions` table in Supabase.
 //   2. Sends a confirmation email to the prospect.
 //   3. Syncs the contact to HubSpot CRM via _hubspot.ts.
-// No auth required — this is a public-facing form.
+// No auth required - this is a public-facing form.
 // NOTE: Named admin-contact to avoid conflict with existing /contact page route.
 import { NextRequest, NextResponse } from "next/server";
 

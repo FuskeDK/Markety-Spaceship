@@ -3,7 +3,7 @@
 // first by region tag (e.g. "da-DK" → DKK), then by base language ("da" → DKK),
 // defaulting to USD. Provides a `format(usdAmount)` helper that multiplies by
 // a hardcoded exchange rate and formats with Intl.NumberFormat.
-// Note: rates are hardcoded approximations — update periodically or replace
+// Note: rates are hardcoded approximations - update periodically or replace
 // with a live FX API if precision becomes important.
 // Used by: src/components/HeroSection.tsx and any component showing pricing.
 import { useState, useEffect } from "react";

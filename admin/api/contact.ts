@@ -4,7 +4,7 @@
 //   1. Saves the submission to the `contact_submissions` table in Supabase.
 //   2. Sends a confirmation email to the prospect.
 //   3. Syncs the contact to HubSpot CRM via _hubspot.ts.
-// No auth required — this is a public-facing form. The frontend at
+// No auth required - this is a public-facing form. The frontend at
 // src/pages/Contact.tsx posts here; on success it navigates to /contact/sent.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";

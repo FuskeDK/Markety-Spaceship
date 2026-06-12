@@ -1,9 +1,9 @@
-// Contact form handler for Nordic Solfilm (nordicsolfilm.dk) — a Markety
+// Contact form handler for Nordic Solfilm (nordicsolfilm.dk) - a Markety
 // client with their own contact page hosted on that domain.
 // Accepts POST { name, phone, email, message }. On success:
 //   1. Sends a Danish confirmation email to the prospect.
 //   2. Writes the contact to Airtable (the "Kontakter" table) via _airtable.ts.
-// No Supabase usage — Nordic Solfilm's contacts live in Airtable only.
+// No Supabase usage - Nordic Solfilm's contacts live in Airtable only.
 // The admin can read and reply to these from the admin panel via
 // api/nordic-messages.ts. CORS is open so nordicsolfilm.dk can POST here.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await sendEmail({
       to: email,
-      subject: "Vi har modtaget din besked – Nordic Solfilm",
+      subject: "Vi har modtaget din besked - Nordic Solfilm",
       html: customerHtml,
     });
 

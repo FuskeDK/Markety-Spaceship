@@ -1,4 +1,4 @@
-// Company info onboarding form handler — called from the CompanyInfoForm page
+// Company info onboarding form handler - called from the CompanyInfoForm page
 // after a prospect fills in their details. This is the main new-client
 // intake flow. On POST it:
 //   1. Auto-creates a new row in the `clients` table with a unique dashboard

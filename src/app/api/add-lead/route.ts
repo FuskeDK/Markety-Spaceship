@@ -1,4 +1,4 @@
-// Public lead-submission endpoint — the only API route called by client
+// Public lead-submission endpoint - the only API route called by client
 // websites (e.g. a client's landing page). Accepts a POST with
 // { clientToken, name, email, phone, source } and:
 //   1. Validates phone format and deduplicates within 30 days.
@@ -8,7 +8,7 @@
 //   4. Emails the client (lead notification) and admin (internal alert).
 //   5. Creates a ClickUp task in the Leads list.
 // Origin gating: only accepts requests from ALLOWED_ORIGINS.
-// No admin auth required — the clientToken acts as the access key.
+// No admin auth required - the clientToken acts as the access key.
 import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@supabase/supabase-js";

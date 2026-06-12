@@ -3,9 +3,9 @@
 // file via an `action` query/body param rather than separate routes.
 // Authentication: most actions require the x-admin-password header matching
 // ADMIN_PASSWORD env var (enforced by isAuthed()). Exceptions:
-//   - "login"         — validates the password and returns success/failure
-//   - "find-companies"— public CVR/company lookup (no auth)
-//   - "cron-*"        — authenticated by CRON_SECRET Bearer token (Vercel cron)
+//   - "login"         - validates the password and returns success/failure
+//   - "find-companies"- public CVR/company lookup (no auth)
+//   - "cron-*"        - authenticated by CRON_SECRET Bearer token (Vercel cron)
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
@@ -394,7 +394,7 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
             line_items: [{
               price_data: {
                 currency: (client.currency || "USD").toLowerCase(),
-                product_data: { name: `${leads} leads – ${monthName}` },
+                product_data: { name: `${leads} leads - ${monthName}` },
                 unit_amount: Math.round(amountDue * 100),
               },
               quantity: 1,
@@ -690,7 +690,7 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
           line_items: [{
             price_data: {
               currency: (client.currency || "USD").toLowerCase(),
-              product_data: { name: `${leads} leads – ${monthName}` },
+              product_data: { name: `${leads} leads - ${monthName}` },
               unit_amount: Math.round(amountDue * 100),
             },
             quantity: 1,
@@ -1211,7 +1211,7 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       const langNames: Record<string, string> = { da: "Danish", en: "English", de: "German", sv: "Swedish", no: "Norwegian" };
       const langName = langNames[lang as string] ?? "Danish";
 
-      const promptText = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received — no fixed monthly price. First 30 days are free.
+      const promptText = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received - no fixed monthly price. First 30 days are free.
 
 I scraped the homepage of a ${industry ?? "local business"} called "${companyName ?? "this company"}". Here is what their website says:
 

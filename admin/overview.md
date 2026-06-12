@@ -1,4 +1,4 @@
-# Markety — Codebase Overview
+# Markety - Codebase Overview
 
 ## What is this?
 
@@ -36,8 +36,8 @@ Hosted on **Vercel**. Database on **Supabase** (PostgreSQL). Domain: `marketylea
 ```
 Markety2/
 ├── api/                    # Vercel serverless functions (backend)
-│   ├── admin.ts            # Main admin API — all internal actions
-│   ├── add-lead.ts         # Public endpoint — adds a lead for a client
+│   ├── admin.ts            # Main admin API - all internal actions
+│   ├── add-lead.ts         # Public endpoint - adds a lead for a client
 │   ├── check-submission.ts # Checks if a contact form was already submitted
 │   ├── company-info.ts     # Handles company info form submissions
 │   ├── contact.ts          # Handles public contact form submissions
@@ -120,7 +120,7 @@ Markety2/
 │   ├── Markety.png         # Wide logo (used in navbar)
 │   └── og-image.png        # Open Graph social preview image
 │
-├── index.html              # HTML shell — favicon, font loading, meta tags, JSON-LD
+├── index.html              # HTML shell - favicon, font loading, meta tags, JSON-LD
 ├── vercel.json             # Routing rewrites, headers, cron jobs
 ├── tailwind.config.ts      # Tailwind theme (colors, fonts)
 ├── vite.config.ts          # Vite build config
@@ -133,16 +133,16 @@ Markety2/
 
 | URL | File | Who sees it |
 |---|---|---|
-| `/` | `Index.tsx` | Public — main landing page |
+| `/` | `Index.tsx` | Public - main landing page |
 | `/about` | `About.tsx` | Public |
-| `/contact` | `Contact.tsx` | Public — contact form |
-| `/contact/sent` | `ContactSent.tsx` | Public — after form submit |
-| `/admin` | `Admin.tsx` | Internal only — password protected |
-| `/dashboard/:token` | `Dashboard.tsx` | Clients — unique token per client |
+| `/contact` | `Contact.tsx` | Public - contact form |
+| `/contact/sent` | `ContactSent.tsx` | Public - after form submit |
+| `/admin` | `Admin.tsx` | Internal only - password protected |
+| `/dashboard/:token` | `Dashboard.tsx` | Clients - unique token per client |
 | `/lp/springling` | `Springling.tsx` | Standalone campaign landing page |
-| `/privacy` | `Privacy.tsx` | Public — noindex |
-| `/cookies` | `Cookies.tsx` | Public — noindex |
-| `/terms` | `Terms.tsx` | Public — noindex |
+| `/privacy` | `Privacy.tsx` | Public - noindex |
+| `/cookies` | `Cookies.tsx` | Public - noindex |
+| `/terms` | `Terms.tsx` | Public - noindex |
 
 ---
 
@@ -153,16 +153,16 @@ Password-protected internal tool. All tabs live inside `src/pages/Admin.tsx`.
 | Tab | What it does |
 |---|---|
 | **Dashboard** | KPI overview: active clients, leads this month, revenue, pipeline |
-| **Clients** | List of all clients — add, edit, delete, view leads, manage onboarding |
-| **Leads** | All leads across all clients — filter, update status, delete |
-| **Contacts** | Inbound contact form submissions — reply by email, delete, pipeline status |
-| **Outreach** | Cold outreach tool — find companies via CVR API, research via Nimble, send personalized emails |
-| **Content** | LinkedIn post queue — generate posts from templates, approve, post to LinkedIn via Buffer |
-| **Billing** | Invoice queue — send invoices, mark paid, send payment reminders |
+| **Clients** | List of all clients - add, edit, delete, view leads, manage onboarding |
+| **Leads** | All leads across all clients - filter, update status, delete |
+| **Contacts** | Inbound contact form submissions - reply by email, delete, pipeline status |
+| **Outreach** | Cold outreach tool - find companies via CVR API, research via Nimble, send personalized emails |
+| **Content** | LinkedIn post queue - generate posts from templates, approve, post to LinkedIn via Buffer |
+| **Billing** | Invoice queue - send invoices, mark paid, send payment reminders |
 
 ---
 
-## API — `api/admin.ts`
+## API - `api/admin.ts`
 
 Single entry point for all admin actions. Authenticated via `x-admin-password` header.
 
@@ -245,11 +245,11 @@ Single entry point for all admin actions. Authenticated via `x-admin-password` h
 | File | What it does |
 |---|---|
 | `api/add-lead.ts` | Public endpoint called by landing pages or Zapier to add a lead to a client |
-| `api/dashboard-api.ts` | Serves data to the client dashboard — leads list, stats, filtered by token |
-| `api/contact.ts` | Handles the public contact form — saves to `contact_submissions`, sends email notification |
+| `api/dashboard-api.ts` | Serves data to the client dashboard - leads list, stats, filtered by token |
+| `api/contact.ts` | Handles the public contact form - saves to `contact_submissions`, sends email notification |
 | `api/check-submission.ts` | Prevents duplicate contact form submissions (checks by email) |
 | `api/stats.ts` | Public stats used in landing page (total leads, companies count) |
-| `api/stripe-webhook.ts` | Listens for Stripe events (payment completed) — marks invoice paid |
+| `api/stripe-webhook.ts` | Listens for Stripe events (payment completed) - marks invoice paid |
 | `api/company-info.ts` | Handles onboarding form when a new client fills in their company details |
 | `api/queue-dm.ts` | Queues a LinkedIn DM for later sending |
 | `api/emails.ts` | Shared email utility actions |
@@ -384,7 +384,7 @@ Set in Vercel dashboard under Settings → Environment Variables.
 
 ### Client dashboard
 1. Each client has a unique `dashboard_token` stored in `clients` table
-2. URL is `/dashboard/{token}` — no login required, token is the auth
+2. URL is `/dashboard/{token}` - no login required, token is the auth
 3. `api/dashboard-api.ts` verifies token, returns leads and stats for that client only
 
 ---
@@ -403,8 +403,8 @@ Defined in `vercel.json`:
 
 ## SEO Setup
 
-- `index.html` — title, meta description, Open Graph, Twitter Card, JSON-LD schema (WebSite, Organization, FAQPage, HowTo, BreadcrumbList)
-- `public/robots.txt` — allows all crawlers except `/admin` and `/dashboard`
-- `public/sitemap.xml` — lists all public URLs
-- `vercel.json` — `X-Robots-Tag: noindex` headers on `/privacy`, `/cookies`, `/terms`, `/admin`, `/dashboard`
-- `src/lib/seoOptimizations.ts` — runtime SEO tweaks applied on each route change
+- `index.html` - title, meta description, Open Graph, Twitter Card, JSON-LD schema (WebSite, Organization, FAQPage, HowTo, BreadcrumbList)
+- `public/robots.txt` - allows all crawlers except `/admin` and `/dashboard`
+- `public/sitemap.xml` - lists all public URLs
+- `vercel.json` - `X-Robots-Tag: noindex` headers on `/privacy`, `/cookies`, `/terms`, `/admin`, `/dashboard`
+- `src/lib/seoOptimizations.ts` - runtime SEO tweaks applied on each route change

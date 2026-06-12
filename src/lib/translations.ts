@@ -2,7 +2,7 @@
 // Supports English ("en") and Danish ("da"). The `t()` function picks strings
 // from the correct dict based on the client's `language` field stored in
 // Supabase. `getLocale()` returns the BCP 47 locale string for date formatting.
-// Only the dashboard is translated — the admin panel is English-only.
+// Only the dashboard is translated - the admin panel is English-only.
 type Dict = {
   dashboardNotFound: string; dashboardNotFoundSub: string;
   claimSubtitle: string; claimPassword: string; claimConfirm: string;

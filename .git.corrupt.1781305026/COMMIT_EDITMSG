@@ -1,0 +1,13 @@
+feat: real i18n with hand-written translations (EN/DA/DE/SV/NO)
+
+- Remove Google Translate entirely — no more toolbar, no popups
+- New src/i18n/site-translations.ts with hand-written copy in 5 languages
+- Middleware passes x-locale header so server components detect locale
+- All key components (Hero, Features, StatsHero, FAQ, ResourceAllocation,
+  AboutHero, Navbar) accept translated strings as prop
+- Danish: proper marketing copy written from scratch
+- German, Swedish, Norwegian: full translations included
+- Navbar links correctly prefixed with locale (e.g. /da-DK/about)
+- FAQ stays as "FAQ", Contact stays as "Kontakt" in Danish
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

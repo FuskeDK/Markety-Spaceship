@@ -1,7 +1,7 @@
 // Marketing homepage. Composes all landing page section components in order:
 // Navbar → Hero → LogoMarquee → Stats → Features → HowItWorks → BeforeAfter
 // → AboutPreview → ProductSuite → Differentiators → Benefits → FAQ → CTA → Footer
-// Sets SEO meta tags on mount. No data fetching here — each section component
+// Sets SEO meta tags on mount. No data fetching here - each section component
 // pulls its own live data via hooks where needed.
 import { useEffect } from "react";
 import Navbar from "@/components/Navbar";

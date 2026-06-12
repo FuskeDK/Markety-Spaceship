@@ -3,7 +3,7 @@
 // SPACEMAIL_PASSWORD env var. All outbound mail is sent from
 // info@marketyleadgen.com. Used by: api/admin.ts, api/add-lead.ts,
 // api/contact.ts, api/company-info.ts, api/nordic-contact.ts,
-// api/nordic-messages.ts. Always import this module for email — never
+// api/nordic-messages.ts. Always import this module for email - never
 // create a second transporter elsewhere.
 import * as nodemailer from "nodemailer";
 

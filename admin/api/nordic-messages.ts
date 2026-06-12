@@ -5,7 +5,7 @@
 //   POST { to, contactName, replyMessage, recordId } → sends a Danish reply
 //        email via Spacemail and marks the Airtable record as "besvaret" (answered)
 // Requires x-admin-password header for auth (implicitly via same ADMIN_PASSWORD).
-// No x-admin-password check here — this is called from the admin panel which
+// No x-admin-password check here - this is called from the admin panel which
 // already manages the session client-side. Add auth if this ever becomes
 // more exposed. Data source: same Airtable table as api/nordic-contact.ts.
 import type { VercelRequest, VercelResponse } from "@vercel/node";

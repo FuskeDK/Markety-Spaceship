@@ -1,23 +1,23 @@
 "use client";
 /* eslint-disable */
-// Admin panel — the internal Markety operations UI. Password-protected;
+// Admin panel - the internal Markety operations UI. Password-protected;
 // no URL token scheme, just a single ADMIN_PASSWORD checked server-side.
 //
 // All data fetching and mutations go through api/admin.ts via fetch() calls
-// with the x-admin-password header. No React Query here — state is managed
+// with the x-admin-password header. No React Query here - state is managed
 // with useState + manual refetch patterns.
 //
 // Tab structure (all defined as local functions in this file):
-//   OverviewTab     — earnings + lead stats, monthly bar chart
-//   ClientsTab      — client list, add/edit/delete clients, manual lead entry,
+//   OverviewTab     - earnings + lead stats, monthly bar chart
+//   ClientsTab      - client list, add/edit/delete clients, manual lead entry,
 //                     invoice sending, onboarding checklist, lead notes
-//   LeadsTab        — flat view of all leads across all clients, sortable/filterable
-//   ContentTab      — LinkedIn posts and DMs in pending/approved/rejected states;
+//   LeadsTab        - flat view of all leads across all clients, sortable/filterable
+//   ContentTab      - LinkedIn posts and DMs in pending/approved/rejected states;
 //                     generate new content, approve/reject, mark as posted
-//   OutreachTab     — Nimble-powered research + personalized message generation;
+//   OutreachTab     - Nimble-powered research + personalized message generation;
 //                     Nordic Solfilm contact reader with reply capability
-//   EmailsTab       — IMAP inbox reader (api/emails.ts); compose + reply
-//   StatsTab        — aggregate platform stats (leads/year, earnings, chart)
+//   EmailsTab       - IMAP inbox reader (api/emails.ts); compose + reply
+//   StatsTab        - aggregate platform stats (leads/year, earnings, chart)
 //
 // IMPORTANT: this file is ~3300 lines. When editing, grep for the specific
 // tab function name before navigating. All tab components are co-located
@@ -299,7 +299,7 @@ export default function Admin() {
           {!sidebarCollapsed && <span className="text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 whitespace-nowrap">Admin</span>}
         </div>
 
-        {/* Search — hidden when collapsed */}
+        {/* Search - hidden when collapsed */}
         {!sidebarCollapsed && (
           <div className="px-3 pt-4 pb-2 shrink-0">
             <div className="relative">
@@ -486,7 +486,7 @@ function OverviewTab({ stats, leadsToday, earningsToday, clients, onNavigate }: 
         <div className="bg-white border border-gray-100 rounded-xl p-5">
           <p className="text-xs text-gray-400 font-medium mb-2">Month-over-month growth</p>
           <div className="flex items-end gap-1.5">
-            <p className="text-2xl font-bold text-gray-900">{growth !== null ? `${growth > 0 ? "+" : ""}${growth}%` : "–"}</p>
+            <p className="text-2xl font-bold text-gray-900">{growth !== null ? `${growth > 0 ? "+" : ""}${growth}%` : "-"}</p>
             {growth !== null && growth > 0 && <ArrowUp className="w-4 h-4 text-green-500 mb-0.5" />}
             {growth !== null && growth < 0 && <ArrowDown className="w-4 h-4 text-red-400 mb-0.5" />}
           </div>
@@ -499,7 +499,7 @@ function OverviewTab({ stats, leadsToday, earningsToday, clients, onNavigate }: 
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-5">
           <p className="text-xs text-gray-400 font-medium mb-2">Top client this month</p>
-          <p className="text-lg font-bold text-gray-900 truncate">{topClient?.leads_this_month ? topClient.company : "–"}</p>
+          <p className="text-lg font-bold text-gray-900 truncate">{topClient?.leads_this_month ? topClient.company : "-"}</p>
           <p className="text-xs text-gray-400 mt-1">{topClient?.leads_this_month ? `${topClient.leads_this_month} leads` : "No leads yet"}</p>
         </div>
       </div>
@@ -683,7 +683,7 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-gray-400 shrink-0">{fmt(lead.created_at)}</span>
                     <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">{lead.clientName}</span>
-                    <span className="text-sm font-medium text-gray-800">{lead.name ?? "–"}</span>
+                    <span className="text-sm font-medium text-gray-800">{lead.name ?? "-"}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
                     <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{lead.source ?? "website"}</span>
                   </div>
@@ -758,7 +758,7 @@ function GlobalSearchResults({ query, clients, onClose }: { query: string; clien
             {matchedLeads.slice(0, 20).map(l => (
               <div key={l.id} className="px-5 py-3 flex flex-wrap items-center gap-3">
                 <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">{l.clientName}</span>
-                <span className="text-sm text-gray-800 font-medium">{l.name ?? "–"}</span>
+                <span className="text-sm text-gray-800 font-medium">{l.name ?? "-"}</span>
                 {l.email && <a href={`mailto:${l.email}`} className="text-xs text-gray-500 hover:text-purple-600">{l.email}</a>}
                 {l.phone && <a href={`tel:${l.phone}`} className="text-xs text-gray-500">{l.phone}</a>}
                 <span className="text-xs text-gray-400 ml-auto">{fmt(l.created_at)}</span>
@@ -1532,7 +1532,7 @@ function ClientCard({ client, expanded, onToggle, onInvoice, adminPw, onInvoiceS
             )}
             {client.cap_paused && (
               <span className="inline-flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-medium">
-                <AlertTriangle className="w-3 h-3" /> Cap hit – paused
+                <AlertTriangle className="w-3 h-3" /> Cap hit - paused
               </span>
             )}
             {!client.cap_paused && client.lead_cap && client.leads.length >= Math.floor(client.lead_cap * 0.8) && (
@@ -1804,7 +1804,7 @@ function ClientCard({ client, expanded, onToggle, onInvoice, adminPw, onInvoiceS
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-xs font-medium text-gray-800">{lead.name ?? "–"}</p>
+                            <p className="text-xs font-medium text-gray-800">{lead.name ?? "-"}</p>
                             <span className="text-xs text-gray-400">{fmt(lead.created_at)}</span>
                             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
                           </div>
@@ -2444,7 +2444,7 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
                   </button>
                 )}
                 {!autoResult.homepage && (
-                  <p className="text-xs text-gray-400">No website found — can't personalize</p>
+                  <p className="text-xs text-gray-400">No website found - can't personalize</p>
                 )}
               </div>
             )}
