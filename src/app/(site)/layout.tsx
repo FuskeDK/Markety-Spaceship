@@ -1,18 +1,18 @@
 import { Footer } from "@/components/blocks/footer";
 import { Navbar } from "@/components/blocks/navbar";
 import { LangBanner } from "@/components/lang-banner";
-import { GoogleTranslate } from "@/components/google-translate";
+import { getLocale } from "@/lib/get-locale";
 
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
   return (
     <>
-      <GoogleTranslate />
       <LangBanner />
-      <Navbar />
+      <Navbar locale={locale} />
       <main>{children}</main>
       <Footer />
     </>

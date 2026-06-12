@@ -12,7 +12,7 @@ export function Investors() {
   return (
     <section className="container max-w-5xl py-12">
       <h2 className="text-foreground text-4xl font-medium tracking-wide">
-        Our teams
+        Our team
       </h2>
       <div className="mt-8 grid grid-cols-2 gap-12 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {investors.map((investor) => (

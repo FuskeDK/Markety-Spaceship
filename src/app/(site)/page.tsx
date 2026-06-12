@@ -6,20 +6,22 @@ import { Logos } from "@/components/blocks/logos";
 import { ResourceAllocation } from "@/components/blocks/resource-allocation";
 import { StatsHero } from "@/components/blocks/stats-hero";
 import { Testimonials } from "@/components/blocks/testimonials";
+import { getSiteT } from "@/lib/get-locale";
 
-export default function Home() {
+export default async function Home() {
+  const t = await getSiteT();
   return (
     <>
       <Background className="via-muted to-muted/80">
-        <Hero />
+        <Hero t={t} />
         <Logos />
-        <Features />
-        <ResourceAllocation />
+        <Features t={t} />
+        <ResourceAllocation t={t} />
       </Background>
-      <StatsHero />
+      <StatsHero t={t} />
       <Testimonials />
       <Background variant="bottom">
-        <FAQ />
+        <FAQ t={t} />
       </Background>
     </>
   );

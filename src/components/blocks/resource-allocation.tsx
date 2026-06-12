@@ -3,6 +3,7 @@ import Image from "next/image";
 import { DashedLine } from "../dashed-line";
 
 import { cn } from "@/lib/utils";
+import type { SiteStrings } from "@/i18n/site-translations";
 
 const topItems = [
   {
@@ -111,50 +112,35 @@ const bottomItems = [
   },
 ];
 
-export const ResourceAllocation = () => {
+export const ResourceAllocation = ({ t }: { t: SiteStrings }) => {
+  // Merge translated titles/descriptions into the static item configs
+  const top = topItems.map((item, i) => ({ ...item, title: t.process.steps[i].title, description: t.process.steps[i].description }));
+  const bottom = bottomItems.map((item, i) => ({ ...item, title: t.process.steps[i + 2].title, description: t.process.steps[i + 2].description }));
+
   return (
-    <section
-      id="resource-allocation"
-      className="overflow-hidden pb-28 lg:pb-32"
-    >
+    <section id="resource-allocation" className="overflow-hidden pb-28 lg:pb-32">
       <div className="">
         <h2 className="container text-center text-3xl tracking-tight text-balance sm:text-4xl md:text-5xl lg:text-6xl">
-          How we generate leads for you
+          {t.process.steps[0].title.replace(".", "")} &amp; more
         </h2>
 
         <div className="mt-8 md:mt-12 lg:mt-20">
-          <DashedLine
-            orientation="horizontal"
-            className="container scale-x-105"
-          />
+          <DashedLine orientation="horizontal" className="container scale-x-105" />
 
-          {/* Top Features Grid - 2 items */}
           <div className="relative container flex max-md:flex-col">
-            {topItems.map((item, i) => (
-              <Item key={i} item={item} isLast={i === topItems.length - 1} />
+            {top.map((item, i) => (
+              <Item key={i} item={item} isLast={i === top.length - 1} />
             ))}
           </div>
-          <DashedLine
-            orientation="horizontal"
-            className="container max-w-7xl scale-x-110"
-          />
+          <DashedLine orientation="horizontal" className="container max-w-7xl scale-x-110" />
 
-          {/* Bottom Features Grid - 3 items */}
           <div className="relative container grid max-w-7xl md:grid-cols-3">
-            {bottomItems.map((item, i) => (
-              <Item
-                key={i}
-                item={item}
-                isLast={i === bottomItems.length - 1}
-                className="md:pb-0"
-              />
+            {bottom.map((item, i) => (
+              <Item key={i} item={item} isLast={i === bottom.length - 1} className="md:pb-0" />
             ))}
           </div>
         </div>
-        <DashedLine
-          orientation="horizontal"
-          className="container max-w-7xl scale-x-110"
-        />
+        <DashedLine orientation="horizontal" className="container max-w-7xl scale-x-110" />
       </div>
     </section>
   );

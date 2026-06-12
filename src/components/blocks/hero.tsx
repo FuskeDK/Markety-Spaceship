@@ -1,98 +1,46 @@
 import Image from "next/image";
-
-import {
-  ArrowRight,
-  ChartNoAxesColumn,
-  FileText,
-  Mail,
-  TrendingUp,
-} from "lucide-react";
-
+import { ArrowRight, ChartNoAxesColumn, FileText, Mail, TrendingUp } from "lucide-react";
 import { DashedLine } from "@/components/dashed-line";
 import { Button } from "@/components/ui/button";
+import type { SiteStrings } from "@/i18n/site-translations";
 
-const features = [
-  {
-    title: "Email marketing",
-    description: "Sequences that warm up leads and turn interest into booked calls.",
-    icon: Mail,
-  },
-  {
-    title: "Paid campaigns",
-    description: "Ads managed across Google, Meta, and beyond - optimised daily.",
-    icon: TrendingUp,
-  },
-  {
-    title: "Landing pages",
-    description: "High-converting pages built around your offer and audience.",
-    icon: FileText,
-  },
-  {
-    title: "Full-funnel setup",
-    description: "From first click to qualified conversation, every step handled.",
-    icon: ChartNoAxesColumn,
-  },
-];
+const ICONS = [Mail, TrendingUp, FileText, ChartNoAxesColumn];
 
-export const Hero = () => {
+export const Hero = ({ t }: { t: SiteStrings }) => {
   return (
     <section className="py-28 lg:py-32 lg:pt-44">
       <div className="container flex flex-col justify-between gap-8 md:gap-14 lg:flex-row lg:gap-20">
-        {/* Left side - Main content */}
         <div className="flex-1">
           <h1 className="text-foreground max-w-160 text-3xl tracking-tight md:text-4xl lg:text-5xl xl:whitespace-nowrap">
-            Qualified leads, delivered.
+            {t.hero.headline}
           </h1>
-
           <p className="text-muted-foreground text-1xl mt-5 md:text-3xl">
-            Markety runs your full lead generation system - paid ads, landing
-            pages, email follow-ups, and everything in between.
+            {t.hero.subheadline}
           </p>
-
           <div className="mt-8 flex flex-wrap items-center gap-4 lg:flex-nowrap">
             <Button asChild>
-              <a href="/contact">
-                Try free for 30 days
-              </a>
+              <a href="/contact">{t.hero.ctaPrimary}</a>
             </Button>
-            <Button
-              variant="outline"
-              className="from-background h-auto gap-2 bg-linear-to-r to-transparent shadow-md"
-              asChild
-            >
-              <a
-                href="/#resource-allocation"
-                className="max-w-56 truncate text-start md:max-w-none"
-              >
-                Learn how it works
+            <Button variant="outline" className="from-background h-auto gap-2 bg-linear-to-r to-transparent shadow-md" asChild>
+              <a href="/#resource-allocation" className="max-w-56 truncate text-start md:max-w-none">
+                {t.hero.ctaSecondary}
                 <ArrowRight className="stroke-3" />
               </a>
             </Button>
           </div>
         </div>
 
-        {/* Right side - Features */}
         <div className="relative flex flex-1 flex-col justify-center space-y-5 max-lg:pt-10 lg:pl-10">
-          <DashedLine
-            orientation="vertical"
-            className="absolute top-0 left-0 max-lg:hidden"
-          />
-          <DashedLine
-            orientation="horizontal"
-            className="absolute top-0 lg:hidden"
-          />
-          {features.map((feature) => {
-            const Icon = feature.icon;
+          <DashedLine orientation="vertical" className="absolute top-0 left-0 max-lg:hidden" />
+          <DashedLine orientation="horizontal" className="absolute top-0 lg:hidden" />
+          {t.hero.features.map((feature, i) => {
+            const Icon = ICONS[i];
             return (
               <div key={feature.title} className="flex gap-2.5 lg:gap-5">
                 <Icon className="text-foreground mt-1 size-4 shrink-0 lg:size-5" />
                 <div>
-                  <h2 className="font-text text-foreground font-semibold">
-                    {feature.title}
-                  </h2>
-                  <p className="text-muted-foreground max-w-76 text-sm">
-                    {feature.description}
-                  </p>
+                  <h2 className="font-text text-foreground font-semibold">{feature.title}</h2>
+                  <p className="text-muted-foreground max-w-76 text-sm">{feature.description}</p>
                 </div>
               </div>
             );
@@ -102,12 +50,7 @@ export const Hero = () => {
 
       <div className="mt-12 max-lg:ml-6 max-lg:h-[550px] max-lg:overflow-hidden md:mt-20 lg:container lg:mt-24">
         <div className="relative h-[793px] w-full">
-          <Image
-            src="/hero.webp"
-            alt="hero"
-            fill
-            className="rounded-2xl object-cover object-left-top shadow-lg max-lg:rounded-tr-none"
-          />
+          <Image src="/hero.webp" alt="hero" fill className="rounded-2xl object-cover object-left-top shadow-lg max-lg:rounded-tr-none" />
         </div>
       </div>
     </section>
