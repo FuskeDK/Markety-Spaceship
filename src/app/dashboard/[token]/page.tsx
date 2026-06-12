@@ -691,53 +691,68 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/Markety.png" alt="Markety" className="h-7 w-auto" />
-            <span className="text-sm text-gray-300">|</span>
-            <span className="text-sm font-semibold text-gray-700">{client.company}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={fetchData} disabled={refreshing}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40">
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} /> {t(lang, "refresh")}
-            </button>
-            <span className="text-xs text-gray-400 hidden sm:block">
-              {t(lang, "clientSince", { date: formatDate(client.created_at, locale) })}
-            </span>
-          </div>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+        {/* Logo + company */}
+        <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-100 shrink-0 min-w-0">
+          <img src="/markety-logo.png" alt="Markety" className="h-5 w-auto shrink-0" />
+          <span className="text-xs text-gray-500 font-medium truncate">{client.company}</span>
         </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1 sm:gap-5 border-t border-gray-100 overflow-x-auto">
+
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {TABS.map(tb => (
-            <button key={tb.id} onClick={() => handleTabClick(tb.id)}
-              className={`flex items-center gap-1.5 py-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                tab === tb.id ? "text-gray-900" : "border-transparent text-gray-400 hover:text-gray-600"
+            <button
+              key={tb.id}
+              onClick={() => handleTabClick(tb.id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                tab === tb.id ? "text-purple-700" : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               }`}
-              style={tab === tb.id ? { borderColor: "hsl(252 89% 58%)", color: "#111827" } : {}}>
-              <tb.icon className="w-3.5 h-3.5 hidden sm:block" />
-              <span className={tb.blink && tab !== tb.id ? "tab-notification" : ""}>{tb.label}</span>
+              style={tab === tb.id ? { background: "hsl(252 89% 58% / 0.08)" } : {}}
+            >
+              <tb.icon className={`w-4 h-4 shrink-0 ${tab === tb.id ? "text-purple-600" : ""}`} />
+              <span className="flex-1">{tb.label}</span>
+              {tb.blink && tab !== tb.id && (
+                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+              )}
             </button>
           ))}
+        </nav>
+
+        {/* Bottom */}
+        <div className="px-2 py-3 border-t border-gray-100 space-y-0.5 shrink-0">
+          <button
+            onClick={() => fetchData()}
+            disabled={refreshing}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40"
+          >
+            <RefreshCw className={`w-4 h-4 shrink-0 ${refreshing ? "animate-spin" : ""}`} />
+            {t(lang, "refresh")}
+          </button>
+          <div className="px-3 py-2">
+            <p className="text-xs text-gray-400 truncate">{t(lang, "clientSince", { date: formatDate(client.created_at, locale) })}</p>
+          </div>
         </div>
-      </div>
+      </aside>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {tab === "overview" && <OverviewTab leads={leads} client={client} lang={lang} locale={locale} token={token!}
-          onLeadStatusUpdate={(id, status) => setLeads(prev => prev.map(l => l.id === id ? { ...l, lead_status: status } : l))} />}
-        {tab === "analytics" && <AnalyticsTab leads={leads} lang={lang} locale={locale} />}
-        {tab === "invoices" && <InvoicesTab leads={leads} client={client} invoices={invoices} lang={lang} locale={locale} />}
-        {tab === "campaigns" && <CampaignsTab leads={leads} client={client} lang={lang} locale={locale} />}
-        {tab === "beskeder" && <BeskeederTab />}
-        {tab === "produkter" && <ProdukterTab token={token!} />}
-        {tab === "ordrer" && <OrdrerTab orders={orders} token={token!} onOrderUpdated={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} />}
-        {tab === "account" && <AccountTab token={token!} client={client} lang={lang} locale={locale} />}
-      </div>
-
-      <p className="text-center text-xs text-gray-300 pb-8">
-        Powered by <span translate="no">Markety</span> · info@marketyleadgen.com
-      </p>
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {tab === "overview" && <OverviewTab leads={leads} client={client} lang={lang} locale={locale} token={token!}
+            onLeadStatusUpdate={(id, status) => setLeads(prev => prev.map(l => l.id === id ? { ...l, lead_status: status } : l))} />}
+          {tab === "analytics" && <AnalyticsTab leads={leads} lang={lang} locale={locale} />}
+          {tab === "invoices" && <InvoicesTab leads={leads} client={client} invoices={invoices} lang={lang} locale={locale} />}
+          {tab === "campaigns" && <CampaignsTab leads={leads} client={client} lang={lang} locale={locale} />}
+          {tab === "beskeder" && <BeskeederTab />}
+          {tab === "produkter" && <ProdukterTab token={token!} />}
+          {tab === "ordrer" && <OrdrerTab orders={orders} token={token!} onOrderUpdated={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} />}
+          {tab === "account" && <AccountTab token={token!} client={client} lang={lang} locale={locale} />}
+        </div>
+        <p className="text-center text-xs text-gray-300 pb-8">
+          Powered by <span translate="no">Markety</span> · info@marketyleadgen.com
+        </p>
+      </main>
     </div>
   );
 };
