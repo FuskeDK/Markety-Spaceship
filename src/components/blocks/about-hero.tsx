@@ -1,25 +1,36 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { DashedLine } from "@/components/dashed-line";
 
-const stats = [
-  {
-    value: "~$2.80",
-    label: "Avg. cost per qualified lead",
-  },
-  {
-    value: "150+",
-    label: "Companies served",
-  },
-  {
-    value: "50K+",
-    label: "Leads delivered",
-  },
-  {
-    value: "Denmark",
-    label: "Based in",
-  },
-];
+interface StatsData {
+  leadsThisYear: number;
+  companiesCount: number;
+}
+
+function formatLeads(n: number): string {
+  if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+  return `${n}+`;
+}
 
 export function AboutHero() {
+  const [data, setData] = useState<StatsData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  const stats = [
+    { value: "~$2.80", label: "Avg. cost per qualified lead" },
+    { value: data ? `${data.companiesCount}+` : "150+", label: "Companies served" },
+    { value: data ? formatLeads(data.leadsThisYear) : "50K+", label: "Leads delivered" },
+    { value: "Denmark", label: "Based in" },
+  ];
+
   return (
     <section className="">
       <div className="container flex max-w-5xl flex-col justify-between gap-8 md:gap-20 lg:flex-row lg:items-center lg:gap-24 xl:gap-24">
@@ -33,7 +44,7 @@ export function AboutHero() {
           </p>
 
           <p className="text-muted-foreground mt-8 hidden max-w-lg space-y-6 text-lg text-balance md:block lg:mt-12">
-            We’re a lead generation agency built from the ground up to deliver
+            We're a lead generation agency built from the ground up to deliver
             qualified prospects to your sales team. No generic playbooks, no
             wasted budget - just a system tuned to your business and your
             customers.
@@ -42,7 +53,7 @@ export function AboutHero() {
             We are customer-obsessed - investing the time to understand every
             aspect of your sales process so that we can build campaigns that
             actually convert. We work on a pay-per-lead model because your
-            success is our success. We don’t win unless you do.
+            success is our success. We don't win unless you do.
           </p>
         </div>
 
