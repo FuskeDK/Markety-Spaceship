@@ -26,7 +26,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
-  ChevronDown, ChevronUp, CheckCircle2, Clock, Mail, Phone,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, Clock, Mail, Phone,
   Lock, Eye, EyeOff, LogOut, DollarSign, TrendingUp, Users, BarChart2,
   Copy, Check, Search, X, ExternalLink, Zap, UserPlus, List,
   ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine,
@@ -144,6 +144,7 @@ export default function Admin() {
   const [authedPw, setAuthedPw] = useState<string | null>(() => typeof window !== "undefined" ? localStorage.getItem(ADMIN_KEY) : null);
 
   const [tab, setTab] = useState<"overview" | "clients" | "all-leads" | "outreach" | "emails" | "content" | "contacts" | "invoice-queue">("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -162,6 +163,10 @@ export default function Admin() {
     setClients(clientsData.clients ?? []);
     setStats(statsData);
     if (!silent) setDataLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) setSidebarCollapsed(true);
   }, []);
 
   useEffect(() => {
@@ -287,30 +292,32 @@ export default function Admin() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+      <aside className={`${sidebarCollapsed ? "w-14" : "w-56"} bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-200`}>
         {/* Logo */}
-        <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-100 shrink-0">
-          <img src="/markety-logo.png" alt="Markety" className="h-5 w-auto" />
-          <span className="text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Admin</span>
+        <div className={`h-16 flex items-center border-b border-gray-100 shrink-0 overflow-hidden ${sidebarCollapsed ? "justify-center px-0" : "gap-2.5 px-5"}`}>
+          <img src="/markety-logo.png" alt="Markety" className="h-5 w-auto shrink-0" />
+          {!sidebarCollapsed && <span className="text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 whitespace-nowrap">Admin</span>}
         </div>
 
-        {/* Search */}
-        <div className="px-3 pt-4 pb-2 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-            <input
-              value={globalSearch}
-              onChange={e => setGlobalSearch(e.target.value)}
-              placeholder="Search…"
-              className="w-full h-8 pl-8 pr-6 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-200 placeholder:text-gray-300 text-gray-800 bg-gray-50"
-            />
-            {globalSearch && (
-              <button onClick={() => setGlobalSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
-                <X className="w-3 h-3" />
-              </button>
-            )}
+        {/* Search — hidden when collapsed */}
+        {!sidebarCollapsed && (
+          <div className="px-3 pt-4 pb-2 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300 pointer-events-none" />
+              <input
+                value={globalSearch}
+                onChange={e => setGlobalSearch(e.target.value)}
+                placeholder="Search…"
+                className="w-full h-8 pl-8 pr-6 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-200 placeholder:text-gray-300 text-gray-800 bg-gray-50"
+              />
+              {globalSearch && (
+                <button onClick={() => setGlobalSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
@@ -318,7 +325,8 @@ export default function Admin() {
             <button
               key={t.id}
               onClick={() => handleTabClick(t.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+              title={sidebarCollapsed ? t.label : undefined}
+              className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5 text-left"} ${
                 tab === t.id
                   ? "text-purple-700"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
@@ -326,8 +334,8 @@ export default function Admin() {
               style={tab === t.id ? { background: "hsl(252 89% 58% / 0.08)" } : {}}
             >
               <t.icon className={`w-4 h-4 shrink-0 ${tab === t.id ? "text-purple-600" : ""}`} />
-              <span className="flex-1">{t.label}</span>
-              {t.blink && tab !== t.id && (
+              {!sidebarCollapsed && <span className="flex-1">{t.label}</span>}
+              {!sidebarCollapsed && t.blink && tab !== t.id && (
                 <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
               )}
             </button>
@@ -337,19 +345,29 @@ export default function Admin() {
         {/* Bottom */}
         <div className="px-2 py-3 border-t border-gray-100 space-y-0.5 shrink-0">
           <button
+            onClick={() => setSidebarCollapsed(c => !c)}
+            className={`w-full flex items-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5"}`}
+            title={sidebarCollapsed ? "Expand" : "Collapse"}
+          >
+            {sidebarCollapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
+            {!sidebarCollapsed && <span className="flex-1">Collapse</span>}
+          </button>
+          <button
             onClick={() => fetchData(authedPw!)}
             disabled={dataLoading}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40"
+            title={sidebarCollapsed ? "Refresh" : undefined}
+            className={`w-full flex items-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40 ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5"}`}
           >
             <RefreshCw className={`w-4 h-4 shrink-0 ${dataLoading ? "animate-spin" : ""}`} />
-            Refresh
+            {!sidebarCollapsed && "Refresh"}
           </button>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+            title={sidebarCollapsed ? "Sign out" : undefined}
+            className={`w-full flex items-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5"}`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            Sign out
+            {!sidebarCollapsed && "Sign out"}
           </button>
         </div>
       </aside>
