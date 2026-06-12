@@ -1,0 +1,21 @@
+{
+  "name": "Markety",
+  "short_name": "Markety",
+  "description": "Lead generation agency for local businesses. Pay per qualified lead.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#6836F4",
+  "icons": [
+    {
+      "src": "/markety-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/markety-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

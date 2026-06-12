@@ -1,0 +1,193 @@
+import type { ReactNode } from "react";
+
+export type Section = { title: string; body: string };
+
+/* ── Default privacy content ───────────────────────────────────────── */
+export const defaultPrivacy: Section[] = [
+  {
+    title: "1. Who we are",
+    body: "Markety is a lead generation and digital marketing agency. When you visit our website or submit a contact form, we may collect and use information about you as described in this policy.\n\nIf you have any questions about this policy, you can reach us at info@marketyleadgen.com.",
+  },
+  {
+    title: "2. What information we collect",
+    body: "We collect information in the following ways:\n- Contact form: when you fill in our contact form we collect your name, email address, company name, and the message you send us.\n- Cookies: we use cookies to understand how visitors use our site and to improve your experience. See section 5 for details.\n- Analytics: we may collect anonymised usage data such as pages visited, time on site, and referral source.",
+  },
+  {
+    title: "3. How we use your information",
+    body: "We use the information we collect to:\n- Respond to your enquiries and communicate with you about our services.\n- Understand how our website is used so we can improve it.\n- Send you relevant updates or marketing communications if you have opted in.\n\nWe never sell your personal data to third parties.",
+  },
+  {
+    title: "4. How we share your information",
+    body: "We do not sell, trade, or rent your personal information to anyone. We may share data with trusted service providers who help us operate our website and deliver our services (for example, our CRM and email platform), but only to the extent necessary and under confidentiality agreements.",
+  },
+  {
+    title: "5. Cookies",
+    body: "Cookies are small text files stored in your browser. We use the following types of cookies:\n- Essential cookies: required for the website to function correctly (e.g. remembering your cookie preference).\n- Analytics cookies: help us understand how visitors interact with our site. These are only set if you accept cookies.\n\nYou can withdraw your cookie consent at any time by clearing your browser's local storage or by contacting us.",
+  },
+  {
+    title: "6. Data retention",
+    body: "We retain personal data submitted through our contact form for as long as necessary to respond to your enquiry and maintain our business records, typically no longer than 2 years. You can request deletion of your data at any time.",
+  },
+  {
+    title: "7. Your rights",
+    body: "Depending on where you are located, you may have the right to:\n- Access the personal data we hold about you.\n- Request correction or deletion of your data.\n- Object to or restrict certain processing of your data.\n- Withdraw consent where processing is based on consent.\n\nTo exercise any of these rights, contact us at info@marketyleadgen.com.",
+  },
+  {
+    title: "8. Third-party links",
+    body: "Our website may contain links to third-party websites. We are not responsible for the privacy practices of those sites and encourage you to read their privacy policies.",
+  },
+  {
+    title: "9. Changes to this policy",
+    body: "We may update this Privacy Policy from time to time. When we do, we will update the \"Last updated\" date at the top of this page. Continued use of our site after any changes constitutes acceptance of the updated policy.",
+  },
+  {
+    title: "10. Contact",
+    body: "If you have any questions or concerns about this Privacy Policy, please contact us at info@marketyleadgen.com.",
+  },
+];
+
+/* ── Default terms content ─────────────────────────────────────────── */
+export const defaultTerms: Section[] = [
+  {
+    title: "1. Introduction",
+    body: "These Terms and Conditions govern your use of the Markety website and any services we provide. By accessing our website or engaging our services, you agree to be bound by these Terms. If you do not agree, please do not use our site or services.\n\nMarkety operates as a digital marketing and lead generation agency. Questions about these Terms can be directed to info@marketyleadgen.com.",
+  },
+  {
+    title: "2. Services",
+    body: "Markety provides lead generation, paid advertising management, email marketing, landing page creation, funnel architecture, and related digital marketing services. The exact scope of services for each client is agreed in writing before work begins.\n\nWe reserve the right to refuse service to any party at our sole discretion.",
+  },
+  {
+    title: "3. Client responsibilities",
+    body: "When working with Markety, you agree to:\n- Provide accurate and complete information about your business and goals.\n- Grant us the necessary access to your ad accounts, platforms, and tools required to deliver the agreed services.\n- Respond to our communications within a reasonable timeframe.\n- Ensure that any content, materials, or information you provide to us does not infringe any third-party rights or violate applicable law.",
+  },
+  {
+    title: "4. Payment terms",
+    body: "Our pricing is based on the leads we deliver, as agreed in writing before engagement. Invoices are due within 14 days of issue unless otherwise agreed. Late payments may result in a pause of services until the outstanding balance is settled.\n\nAll prices are exclusive of any applicable taxes unless stated otherwise. You are responsible for any taxes applicable in your jurisdiction.",
+  },
+  {
+    title: "5. Intellectual property",
+    body: "All campaign assets, landing pages, email sequences, and creative materials built by Markety for your account are owned by you upon full payment. Markety retains no claim over work delivered and paid for.\n\nAny tools, templates, methodologies, or processes developed by Markety remain the intellectual property of Markety and are licensed to you for use during the engagement only.",
+  },
+  {
+    title: "6. Confidentiality",
+    body: "Both parties agree to keep confidential any non-public information shared during the engagement, including but not limited to business strategy, pricing, client data, and performance metrics. This obligation survives the termination of any agreement.",
+  },
+  {
+    title: "7. Results and guarantees",
+    body: "Markety works to deliver qualified leads as defined and agreed before an engagement begins. However, we cannot guarantee specific outcomes, revenue, or conversion rates, as results depend on factors outside our control including market conditions, your sales process, and platform performance.\n\nWe are committed to transparency. If campaigns are underperforming, we will tell you promptly and adjust our approach.",
+  },
+  {
+    title: "8. Termination",
+    body: "Either party may terminate the engagement with reasonable written notice. We operate on a month-to-month basis with no long-term lock-in unless otherwise agreed in your specific contract.\n\nUpon termination, all assets built in your accounts remain yours. Any outstanding invoices for work completed up to the termination date remain payable.",
+  },
+  {
+    title: "9. Limitation of liability",
+    body: "To the maximum extent permitted by law, Markety's total liability to you for any claim arising out of or in connection with our services shall not exceed the total fees paid by you in the three months preceding the claim.\n\nWe are not liable for any indirect, incidental, consequential, or punitive damages, including loss of revenue or loss of data.",
+  },
+  {
+    title: "10. Use of this website",
+    body: "You may use this website for lawful purposes only. You must not use it in any way that violates applicable local, national, or international law or regulation, or to transmit any unsolicited commercial communications.\n\nWe reserve the right to suspend or terminate access to this website for anyone who violates these Terms.",
+  },
+  {
+    title: "11. Changes to these Terms",
+    body: "We may update these Terms from time to time. When we do, we will revise the \"Last updated\" date at the top of this page. Your continued use of our website or services after changes are posted constitutes acceptance of the updated Terms.",
+  },
+  {
+    title: "12. Governing law",
+    body: "These Terms are governed by and construed in accordance with applicable law. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the relevant courts.",
+  },
+  {
+    title: "13. Contact",
+    body: "For any questions about these Terms, please contact us at info@marketyleadgen.com.",
+  },
+];
+
+/* ── Body renderer ─────────────────────────────────────────────────── */
+function linkify(text: string): ReactNode {
+  const parts = text.split(/(https?:\/\/[^\s]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g);
+  if (parts.length === 1) return text;
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^https?:\/\//.test(part)) {
+          return (
+            <a key={i} href={part} className="text-purple-deep hover:underline" target="_blank" rel="noopener noreferrer">
+              {part}
+            </a>
+          );
+        }
+        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(part)) {
+          return (
+            <a key={i} href={`mailto:${part}`} className="text-purple-deep hover:underline">
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+export function renderBody(body: string): ReactNode[] {
+  const result: ReactNode[] = [];
+  let key = 0;
+
+  for (const block of body.split("\n\n")) {
+    const lines = block.split("\n");
+    let textBuf: string[] = [];
+    let listBuf: string[] = [];
+
+    const flushText = () => {
+      if (!textBuf.length) return;
+      result.push(<p key={key++}>{linkify(textBuf.join(" "))}</p>);
+      textBuf = [];
+    };
+    const flushList = () => {
+      if (!listBuf.length) return;
+      result.push(
+        <ul key={key++} className="list-disc pl-5 space-y-2">
+          {listBuf.map((item, j) => <li key={j}>{linkify(item)}</li>)}
+        </ul>
+      );
+      listBuf = [];
+    };
+
+    for (const line of lines) {
+      if (line.startsWith("- ")) {
+        flushText();
+        listBuf.push(line.slice(2));
+      } else {
+        flushList();
+        if (line.trim()) textBuf.push(line);
+      }
+    }
+    flushText();
+    flushList();
+  }
+
+  return result;
+}
+
+/* ── localStorage helpers ──────────────────────────────────────────── */
+const KEYS = {
+  privacy: "markety-privacy-content-v2",
+  terms: "markety-terms-content-v2",
+} as const;
+
+export function loadContent(page: "privacy" | "terms"): Section[] {
+  try {
+    const stored = localStorage.getItem(KEYS[page]);
+    if (stored) return JSON.parse(stored) as Section[];
+  } catch { /* ignore */ }
+  return page === "privacy" ? defaultPrivacy : defaultTerms;
+}
+
+export function saveContent(page: "privacy" | "terms", sections: Section[]): void {
+  localStorage.setItem(KEYS[page], JSON.stringify(sections));
+}
+
+export function resetContent(page: "privacy" | "terms"): Section[] {
+  localStorage.removeItem(KEYS[page]);
+  return page === "privacy" ? defaultPrivacy : defaultTerms;
+}

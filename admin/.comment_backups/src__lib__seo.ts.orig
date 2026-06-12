@@ -1,0 +1,54 @@
+// SEO metadata configuration for each page
+export const seoMetadata = {
+  home: {
+    title: "Markety",
+    description: "Generate qualified leads on autopilot with Markety. We handle your entire lead generation pipeline - ads, landing pages, and follow-ups - so you can focus on closing deals.",
+    keywords: "lead generation, qualified leads, B2B sales, SaaS marketing, automated lead gen",
+  },
+  about: {
+    title: "Markety",
+    description: "Learn how Markety helps B2B companies generate qualified leads on autopilot. Our proven system combines paid ads, landing pages, email sequences, and dedicated support.",
+    keywords: "lead generation agency, B2B marketing, sales funnel, lead qualification",
+  },
+  contact: {
+    title: "Markety",
+    description: "Ready to start generating qualified leads? Contact our team to discuss your lead generation strategy and get a free consultation.",
+    keywords: "contact us, lead generation help, sales consultation, B2B marketing consultation",
+  },
+  privacy: {
+    title: "Markety",
+    description: "Read Markety's privacy policy to understand how we collect, use, and protect your data.",
+    keywords: "privacy policy, data protection",
+  },
+  terms: {
+    title: "Markety",
+    description: "Review Markety's terms of service to understand the terms governing your use of our platform.",
+    keywords: "terms of service, terms and conditions",
+  },
+};
+
+// Function to set page title and meta description dynamically
+export const setSeoMeta = (key: keyof typeof seoMetadata) => {
+  const meta = seoMetadata[key];
+  
+  // Update title
+  document.title = meta.title;
+  
+  // Update or create meta description
+  let descMeta = document.querySelector('meta[name="description"]');
+  if (!descMeta) {
+    descMeta = document.createElement('meta');
+    descMeta.setAttribute('name', 'description');
+    document.head.appendChild(descMeta);
+  }
+  descMeta.setAttribute('content', meta.description);
+  
+  // Update or create keywords meta
+  let keywordsMeta = document.querySelector('meta[name="keywords"]');
+  if (!keywordsMeta) {
+    keywordsMeta = document.createElement('meta');
+    keywordsMeta.setAttribute('name', 'keywords');
+    document.head.appendChild(keywordsMeta);
+  }
+  keywordsMeta.setAttribute('content', meta.keywords);
+};

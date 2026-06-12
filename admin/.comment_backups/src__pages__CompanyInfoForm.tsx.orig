@@ -1,0 +1,153 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { setSeoMeta } from "@/lib/seo";
+
+const CompanyInfoForm = () => {
+  const params = useParams() as { token?: string };
+  const token = params.token;
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [companyName, setCompanyName] = useState("");
+  const [cvr, setCvr] = useState("");
+  const [companyDescription, setCompanyDescription] = useState("");
+  const [goals, setGoals] = useState("");
+  const [service, setService] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    setSeoMeta("contact");
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setLoading(true);
+
+    try {
+      const payload = {
+        token,
+        companyName,
+        cvr,
+        companyDescription,
+        goals,
+        service,
+      };
+
+      await fetch("http://localhost:5678/webhook-test/contact-form", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      toast({ title: "Thanks, info received", description: "We've sent your company details to our team." });
+      setSubmitted(true);
+
+      // Redirect to the confirmation page and show the submitted company info there
+      navigate("/contact/sent", { state: { ...payload } });
+    } catch (err) {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!token) {
+    return (
+      <>
+        <main className="min-h-screen bg-background">
+          <Navbar />
+          <section className="pt-28 pb-20">
+            <div className="container mx-auto px-4 max-w-2xl text-center">
+              <h1 className="text-2xl font-bold">Invalid link</h1>
+              <p className="text-muted-foreground mt-4">This form link appears invalid. Please return to the contact page and submit again.</p>
+              <div className="mt-6">
+                <Button onClick={() => navigate("/contact")}>Back to contact</Button>
+              </div>
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <main className="min-h-screen bg-background">
+        <Navbar />
+
+        <section className="relative pt-28 pb-12 md:pt-40 md:pb-20 overflow-hidden">
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-3xl mx-auto text-center"
+            >
+              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-purple-600 mb-4">Company info</p>
+              <h1 className="text-3xl font-extrabold text-foreground mb-4">A few quick details about your company</h1>
+              <p className="text-muted-foreground mb-6">This helps us prepare before our first call. It only takes 2-3 minutes.</p>
+            </motion.div>
+
+                  <div className="max-w-2xl mx-auto mt-8 bg-card border border-border rounded-2xl p-6">
+                    {!submitted ? (
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                          <Label htmlFor="companyName">Company name *</Label>
+                          <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="cvr">CVR number (optional)</Label>
+                          <Input id="cvr" value={cvr} onChange={(e) => setCvr(e.target.value)} placeholder="12345678" />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="companyDescription">What does your company do? *</Label>
+                          <Textarea id="companyDescription" value={companyDescription} onChange={(e) => setCompanyDescription(e.target.value)} rows={4} required />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="goals">What do you want to achieve? *</Label>
+                          <Textarea id="goals" value={goals} onChange={(e) => setGoals(e.target.value)} rows={3} required />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="service">Which service are you interested in? *</Label>
+                          <Input id="service" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g. Lead Generation, Ads Management" required />
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                          <Button type="submit" variant="hero" size="sm" className="rounded-full px-5 w-full sm:w-auto" disabled={loading}>{loading ? 'Sending…' : 'Send company info'}</Button>
+                          <Button variant="ghost" className="text-muted-foreground hover:text-foreground w-full sm:w-auto" onClick={() => navigate("/")}>Back to home</Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold">Thanks, we got it</h3>
+                        <p className="text-muted-foreground mt-2">Our team will review this and get back to you within one business day.</p>
+                        <div className="mt-4">
+                          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" onClick={() => navigate("/")}>Back to home</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </>
+  );
+};
+
+export default CompanyInfoForm;

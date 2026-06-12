@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+const root = process.cwd();
+const ignoreNames = new Set(['.git', 'node_modules', 'dist', 'build', '.next', '.vercel']);
+const maxFileSize = 1024 * 1024 * 2; // 2MB
+
+function isBinary(buf) {
+  const len = Math.min(buf.length, 512);
+  for (let i = 0; i < len; i++) {
+    if (buf[i] === 0) return true;
+  }
+  return false;
+}
+
+const backupsDir = path.join(root, '.comment_backups');
+fs.mkdirSync(backupsDir, { recursive: true });
+
+const changed = [];
+
+function traverse(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const ent of entries) {
+    if (ignoreNames.has(ent.name)) continue;
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      traverse(full);
+      continue;
+    }
+    if (ent.isFile()) processFile(full);
+  }
+}
+
+function processFile(fullPath) {
+  try {
+    const rel = path.relative(root, fullPath);
+    const stat = fs.statSync(fullPath);
+    if (stat.size > maxFileSize) return;
+    const buf = fs.readFileSync(fullPath);
+    if (isBinary(buf)) return;
+    let s = buf.toString('utf8');
+    const original = s;
+
+    // Remove block comments: /* ... */
+    s = s.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Remove HTML comments: <!-- ... -->
+    s = s.replace(/<!--([\s\S]*?)-->/g, '');
+
+    // Remove full-line single-line comments (lines that start with optional whitespace then //)
+    s = s.replace(/^\s*\/\/.*$/gm, '');
+
+    // Trim trailing whitespace on lines
+    s = s.replace(/[ \t]+$/gm, '');
+
+    if (s !== original) {
+      const safeName = rel.replace(/[\\/]/g, '__');
+      const backupPath = path.join(backupsDir, safeName + '.orig');
+      fs.writeFileSync(backupPath, original, 'utf8');
+      fs.writeFileSync(fullPath, s, 'utf8');
+      changed.push(rel);
+    }
+  } catch (e) {
+    console.error('Error processing', fullPath, e && e.message);
+  }
+}
+
+traverse(root);
+console.log(JSON.stringify({ changedCount: changed.length, changedFiles: changed.slice(0, 200) }, null, 2));
+if (changed.length) console.log('Backups stored at', backupsDir);
+process.exit(0);

@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 20% 98%;
+    --foreground: 250 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 250 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 250 30% 12%;
+
+    --primary: 252 60% 74%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 250 30% 96%;
+    --secondary-foreground: 250 30% 12%;
+
+    --muted: 250 20% 95%;
+    --muted-foreground: 250 10% 50%;
+
+    --accent: 252 80% 68%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 250 15% 90%;
+    --input: 250 15% 90%;
+    --ring: 252 60% 74%;
+
+    --radius: 0.75rem;
+
+    --purple-light: 252 80% 92%;
+    --purple-mid: 252 60% 74%;
+    --purple-deep: 252 55% 58%;
+    --purple-dark: 252 50% 30%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 250 25% 8%;
+    --foreground: 250 10% 95%;
+    --card: 250 25% 12%;
+    --card-foreground: 250 10% 95%;
+    --popover: 250 25% 12%;
+    --popover-foreground: 250 10% 95%;
+    --primary: 252 60% 74%;
+    --primary-foreground: 250 25% 8%;
+    --secondary: 250 25% 16%;
+    --secondary-foreground: 250 10% 95%;
+    --muted: 250 25% 16%;
+    --muted-foreground: 250 10% 60%;
+    --accent: 252 80% 68%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 250 25% 20%;
+    --input: 250 25% 20%;
+    --ring: 252 60% 74%;
+    --purple-light: 252 45% 20%;
+    --purple-dark: 252 55% 78%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* ── Solid icon container ── */
+  .icon-bg {
+    background-color: hsl(var(--purple-deep));
+  }
+
+  /* ── Badge pill ── */
+  .badge-pill {
+    background: hsl(var(--purple-light));
+    border: 1px solid hsl(var(--purple-mid) / 0.35);
+    color: hsl(var(--purple-deep));
+  }
+
+  /* ── Hide scrollbar ── */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ── Custom scrollbar ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--purple-mid) / 0.5);
+    border-radius: 9999px;
+    transition: background 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--purple-deep));
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--purple-mid) / 0.5) hsl(var(--muted));
+  }
+
+  /* ── Marquee ── */
+  .animate-marquee {
+    animation: marquee 35s linear infinite;
+  }
+
+  .animate-marquee-reverse {
+    animation: marquee-reverse 35s linear infinite;
+  }
+
+  /* ── Float ── */
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
+  }
+  /* ── Reveal on scroll ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 700ms cubic-bezier(0.2,0.8,0.2,1), transform 700ms cubic-bezier(0.2,0.8,0.2,1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+
+  .reveal.revealed {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal-up { transform: translateY(12px); }
+  .reveal-left { transform: translateX(-12px); }
+  .reveal-right { transform: translateX(12px); }
+  .reveal-none { transform: none; }
+
+  /* Reveal targets (for staggered reveals inside a section) */
+  .reveal .reveal-target {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 700ms cubic-bezier(0.2,0.8,0.2,1), transform 700ms cubic-bezier(0.2,0.8,0.2,1);
+    will-change: opacity, transform;
+    transition-delay: 0ms;
+  }
+
+  .reveal .reveal-target.revealed {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal-left .reveal-target { transform: translateX(-12px); }
+  .reveal-right .reveal-target { transform: translateX(12px); }
+  .reveal-zoom .reveal-target { transform: scale(0.98); }
+  .reveal-zoom .reveal-target.revealed { transform: none; }
+
+  /* Strong variant for more pronounced translation */
+  .reveal-strong.reveal-left { transform: translateX(-36px); }
+  .reveal-strong.reveal-right { transform: translateX(36px); }
+  .reveal-strong .reveal-target { transform: translateY(18px); }
+  .reveal-strong .reveal-target.revealed { transform: none; }
+
+  /* Respect reduced motion for reveals */ 
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .reveal.revealed {
+      transition: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+  }
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Mobile base: prevent iOS font scaling & ensure comfortable tap targets ── */
+@media (max-width: 768px) {
+  html { -webkit-text-size-adjust: 100%; }
+}
+
+/* Smooth scrolling for in-page navigation and programmatic scrolls */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
