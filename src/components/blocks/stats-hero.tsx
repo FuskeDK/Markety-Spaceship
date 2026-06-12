@@ -1,11 +1,42 @@
-const stats = [
-  { value: "~$2.80", label: "Avg. cost per qualified lead" },
-  { value: "150+", label: "Companies served" },
-  { value: "50K+", label: "Leads delivered" },
-  { value: "Denmark", label: "Based in" },
-];
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface StatsData {
+  leadsThisYear: number;
+  companiesCount: number;
+  avgDaysToFirstLead: number | null;
+  clientRetention: number | null;
+}
+
+function formatLeads(n: number): string {
+  if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+  return `${n}+`;
+}
 
 export const StatsHero = () => {
+  const [data, setData] = useState<StatsData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  const stats = [
+    { value: "~$2.80", label: "Avg. cost per qualified lead" },
+    {
+      value: data ? `${data.companiesCount}+` : "150+",
+      label: "Companies served",
+    },
+    {
+      value: data ? formatLeads(data.leadsThisYear) : "50K+",
+      label: "Leads delivered",
+    },
+    { value: "Denmark", label: "Based in" },
+  ];
+
   return (
     <section className="py-28 lg:py-32">
       <div className="container max-w-5xl">
