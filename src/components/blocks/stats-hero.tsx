@@ -57,7 +57,7 @@ export const StatsHero = () => {
             />
 
             <div className="flex flex-col">
-              {stats.map((stat, i) => (
+              {stats.map((stat) => (
                 <div
                   key={stat.label}
                   className="flex flex-col gap-1 border-b border-dashed border-border py-5 first:pt-0 last:border-0"
