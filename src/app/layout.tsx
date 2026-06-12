@@ -85,12 +85,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png" },
       { url: "/favicon/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon/favicon.ico", sizes: "48x48" },
+      { url: "/favicon/web-app-manifest-512x512.png" },
     ],
-    apple: [{ url: "/favicon/apple-touch-icon.png", sizes: "180x180" }],
-    shortcut: [{ url: "/favicon/favicon.ico" }],
+    apple: [{ url: "/favicon/web-app-manifest-512x512.png", sizes: "512x512" }],
+    shortcut: [{ url: "/favicon/web-app-manifest-512x512.png" }],
   },
   openGraph: {
     title: "Markety - Qualified Lead Generation",
