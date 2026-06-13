@@ -2292,7 +2292,7 @@ const SUBJECT_VARIANTS: Record<LangCode, (label: string) => string[]> = {
 
 function matchesEmployeeCount(employees: string | null, count: string): boolean {
   if (!count.trim()) return true;
-  if (!employees) return false;
+  if (!employees) return true;
   const n = parseInt(count);
   if (isNaN(n)) return true;
   if (employees.includes("+")) return n >= parseInt(employees);

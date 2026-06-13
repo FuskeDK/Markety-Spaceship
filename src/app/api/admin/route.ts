@@ -178,10 +178,13 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       if (!q) return NextResponse.json({ result: null });
 
       const nimbleKey = process.env.NIMBLE_API_KEY;
-      if (!nimbleKey) return NextResponse.json({ result: null });
+      if (!nimbleKey) {
+        console.error("find-companies: NIMBLE_API_KEY not set");
+        return NextResponse.json({ result: null });
+      }
 
       try {
-        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " UK small business email")}&gl=gb&hl=en&num=8`;
+        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " contact")}&gl=gb&hl=en&num=10`;
         const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
           method: "POST",
           headers: {
@@ -191,19 +194,22 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
           body: JSON.stringify({ url: searchUrl, render: false, format: "markdown", country: "GB" }),
         });
         const nimbleData = await nimbleRes.json();
-        const searchText = ((nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? "") as string).slice(0, 5000);
-        if (!searchText) return NextResponse.json({ result: null });
+        const searchText = ((nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? nimbleData?.markdown ?? "") as string).slice(0, 6000);
+        if (!searchText) {
+          console.error("find-companies: Nimble returned no content", JSON.stringify(nimbleData).slice(0, 300));
+          return NextResponse.json({ result: null });
+        }
 
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
         const msg = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 350,
+          max_tokens: 400,
           messages: [{
             role: "user",
-            content: `From these Google search results, extract the FIRST small local business in the UK, US, or Australia that appears to have 1-3 employees (owner-operated, sole trader, family business, one-man band, etc.). Skip large chains, franchises, and any business that obviously has more than 5 employees. IMPORTANT: Only extract businesses from English-speaking countries (UK, US, Australia, Canada). If a business appears to be from Denmark, Germany, Sweden, Norway, or any non-English-speaking country, skip it entirely and return {"result":null}.
+            content: `From these Google search results, extract the FIRST local business in the UK, US, Australia, or Canada. Skip large national chains, franchises, and obvious corporations — prefer owner-operated or small local businesses. Only extract businesses from English-speaking countries. If everything shown is from a non-English-speaking country, return {"result":null}.
 
-Return ONLY a valid JSON object — no explanation, no markdown fences:
+Return ONLY valid JSON — no explanation, no markdown fences:
 {
   "name": "Business Name",
   "email": "info@example.com or null",
@@ -211,12 +217,12 @@ Return ONLY a valid JSON object — no explanation, no markdown fences:
   "homepage": "https://example.com or null",
   "city": "London",
   "address": "123 High Street, London",
-  "employees": "1-2",
+  "employees": "1-5 or null",
   "industrydesc": "Plumbing services",
   "owners": [{"name": "John Smith"}]
 }
 
-If you cannot find a suitable English-speaking micro-business, return exactly: {"result":null}
+If no suitable business found, return exactly: {"result":null}
 
 Search results:
 ${searchText}`,
@@ -225,7 +231,10 @@ ${searchText}`,
 
         const raw = (msg.content[0] as { type: string; text: string }).text.trim();
         let parsed: Record<string, unknown> | null = null;
-        try { parsed = JSON.parse(raw); } catch { return NextResponse.json({ result: null }); }
+        try { parsed = JSON.parse(raw); } catch {
+          console.error("find-companies: Claude returned non-JSON:", raw.slice(0, 200));
+          return NextResponse.json({ result: null });
+        }
         if (!parsed || parsed.result === null || !parsed.name) return NextResponse.json({ result: null });
 
         const emailVal = ((parsed.email as string | null) ?? "").toLowerCase();
@@ -235,23 +244,25 @@ ${searchText}`,
         const nameVal = ((parsed.name as string) ?? "").toLowerCase();
         if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return NextResponse.json({ result: null });
 
-        // If homepage but no email, try scraping /contact page
+        // If no email found, try scraping homepage → /contact → /contact-us
         if (parsed.homepage && !parsed.email) {
-          try {
-            const contactUrl = (parsed.homepage as string).replace(/\/$/, "") + "/contact";
-            const contactRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
-              },
-              body: JSON.stringify({ url: contactUrl, render: false, format: "markdown", country: "GB" }),
-            });
-            const contactData = await contactRes.json();
-            const contactText = (contactData?.parsing?.markdown ?? contactData?.data?.markdown ?? "") as string;
-            const emailMatch = contactText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-            if (emailMatch) parsed.email = emailMatch[0];
-          } catch { /* email stays null */ }
+          const base = (parsed.homepage as string).replace(/\/$/, "");
+          for (const pageUrl of [base, `${base}/contact`, `${base}/contact-us`]) {
+            try {
+              const pageRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+                },
+                body: JSON.stringify({ url: pageUrl, render: false, format: "markdown", country: "GB" }),
+              });
+              const pageData = await pageRes.json();
+              const pageText = (pageData?.parsing?.markdown ?? pageData?.data?.markdown ?? pageData?.markdown ?? "") as string;
+              const emailMatch = pageText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+              if (emailMatch) { parsed.email = emailMatch[0]; break; }
+            } catch { /* try next page */ }
+          }
         }
 
         return NextResponse.json({
@@ -264,12 +275,13 @@ ${searchText}`,
             zipcode: "",
             address: parsed.address ?? "",
             industrydesc: parsed.industrydesc ?? null,
-            employees: (parsed.employees as string) ?? "1-3",
+            employees: (parsed.employees as string) ?? null,
             owners: parsed.owners ?? null,
             vat: null,
           },
         });
-      } catch {
+      } catch (err) {
+        console.error("find-companies error:", err);
         return NextResponse.json({ result: null });
       }
     }
