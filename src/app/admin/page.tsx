@@ -590,6 +590,8 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
   const [leadNotes, setLeadNotes] = useState<Record<string, string | null>>({});
 
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ id: string; field: "name" | "email" | "phone" } | null>(null);
   const [fieldDraft, setFieldDraft] = useState("");
   const [leadEdits, setLeadEdits] = useState<Record<string, { name?: string; email?: string; phone?: string }>>({});
@@ -609,6 +611,18 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
     if (!r.ok) return;
     const { lead: newLead } = await r.json();
     setClients(prev => prev.map(c => c.id === lead.clientId ? { ...c, leads: [newLead, ...c.leads], leads_this_month: c.leads_this_month + 1 } : c));
+  };
+
+  const deleteLead = async (lead: FlatLead) => {
+    setDeletingId(lead.id);
+    await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "delete-lead", leadId: lead.id }),
+    });
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+    setClients(prev => prev.map(c => c.id === lead.clientId ? { ...c, leads: c.leads.filter(l => l.id !== lead.id) } : c));
   };
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -914,6 +928,23 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
                       className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-gray-400 hover:text-purple-600 px-2 py-0.5 rounded border border-gray-200 hover:border-purple-200 bg-white disabled:opacity-40">
                       <Copy className="w-3 h-3" />{duplicatingId === lead.id ? "…" : "Duplicate"}
                     </button>
+                    {confirmDeleteId === lead.id ? (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                        <span className="text-xs text-red-500">Delete?</span>
+                        <button onClick={() => deleteLead(lead)} disabled={deletingId === lead.id}
+                          className="text-xs text-red-500 font-medium hover:text-red-700 disabled:opacity-40">
+                          {deletingId === lead.id ? "…" : "Yes"}
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-gray-400 hover:text-gray-600">No</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(lead.id)}
+                        title="Delete lead"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-0.5 rounded border border-gray-200 hover:border-red-200 bg-white">
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-3 items-center">
                     <InlineField field="email" value={emailVal} icon={Mail} />
