@@ -716,7 +716,7 @@ ${searchText}`,
 
       const { data: client } = await supabase
         .from("clients")
-        .select("id, name, company, price_per_lead, currency")
+        .select("id, token, name, company, price_per_lead, currency")
         .eq("id", clientId)
         .single();
       if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
@@ -755,8 +755,8 @@ ${searchText}`,
             quantity: 1,
           }],
           metadata: { client_id: client.id, month_key: monthKey },
-          success_url: "https://marketyleadgen.com",
-          cancel_url: "https://marketyleadgen.com",
+          success_url: `https://marketyleadgen.com/dashboard/${client.token}`,
+          cancel_url: `https://marketyleadgen.com/dashboard/${client.token}`,
         });
 
         await supabase.from("invoices")
