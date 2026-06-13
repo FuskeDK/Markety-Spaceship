@@ -76,6 +76,7 @@ export const metadata: Metadata = {
     "marketing agency",
     "Denmark",
   ],
+  applicationName: "Markety",
   authors: [{ name: "Markety" }],
   creator: "Markety",
   publisher: "Markety",
@@ -128,6 +129,29 @@ export default function RootLayout({
           async
           crossOrigin="anonymous"
           src="https://tweakcn.com/live-preview.min.js"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Markety",
+              url: "https://www.marketyleadgen.com",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Markety",
+              url: "https://www.marketyleadgen.com",
+              logo: "https://www.marketyleadgen.com/MarketySquare.png",
+            }),
+          }}
         />
       </head>
       <body className={`${dmSans.variable} ${inter.variable} antialiased`}>
