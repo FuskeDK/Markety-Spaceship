@@ -709,23 +709,18 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
   const FIRST_NAMES = ["James","Oliver","Harry","Jack","George","Noah","Charlie","Jacob","Alfie","Freddie","Isla","Olivia","Amelia","Emily","Ava","Sophia","Grace","Lily","Mia","Poppy"];
   const LAST_NAMES = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Wilson","Taylor","Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Moore","Lee","Walker"];
   const EMAIL_DOMAINS = ["gmail.com","hotmail.com","outlook.com","yahoo.com","icloud.com","btinternet.com","sky.com","hotmail.co.uk","live.co.uk"];
+  const USERNAME_WORDS = ["alex","lamine","cool","dark","star","king","wolf","tiger","dragon","blade","hawk","storm","river","sky","night","blaze","echo","nova","pixel","viper","rocky","ace","arrow","bolt","chase","comet","dash","eagle","flash","frost","glide","haze","iron","jade","kite","lance","mace","onyx","peak","quest","raid","rush","swift","thorn","ultra","vault","wave","xeon","zeal","zion","modo","turbo","raven","dusk","grove","ridge","crest","peak"];
+  const USERNAME_SUFFIXES = ["","dk","x","pro","uk","99","007","_uk","_dk","real","hd","vip","gz","xo","lx"];
   const submitRandomLead = async () => {
     const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
     const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
     const name = `${first} ${last}`;
-    const f = first.toLowerCase(), l = last.toLowerCase();
     const domain = EMAIL_DOMAINS[Math.floor(Math.random() * EMAIL_DOMAINS.length)];
-    const birthYear = 1965 + Math.floor(Math.random() * 35);
-    const patterns = [
-      `${f}.${l}@${domain}`,
-      `${f}${l}@${domain}`,
-      `${f}_${l}@${domain}`,
-      `${f}.${l}${birthYear}@${domain}`,
-      `${f[0]}${l}@${domain}`,
-      `${f}${l[0]}@${domain}`,
-      `${l}.${f}@${domain}`,
-    ];
-    const email = patterns[Math.floor(Math.random() * patterns.length)];
+    const word1 = USERNAME_WORDS[Math.floor(Math.random() * USERNAME_WORDS.length)];
+    const word2 = Math.random() > 0.5 ? USERNAME_WORDS[Math.floor(Math.random() * USERNAME_WORDS.length)] : "";
+    const suffix = USERNAME_SUFFIXES[Math.floor(Math.random() * USERNAME_SUFFIXES.length)];
+    const num = Math.random() > 0.3 ? String(Math.floor(Math.random() > 0.5 ? 1970 + Math.floor(Math.random() * 40) : Math.floor(Math.random() * 9999))) : "";
+    const email = `${word1}${word2}${suffix}${num}@${domain}`;
     const phone = `+44 7${Math.floor(Math.random() * 9)}${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`;
     const source = randomSource.trim() || "order";
     setRandomLoading(true);
