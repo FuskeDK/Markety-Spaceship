@@ -29,7 +29,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, Clock, Mail, Phone,
   Lock, Eye, EyeOff, LogOut, DollarSign, TrendingUp, Users, BarChart2,
   Copy, Check, Search, X, ExternalLink, Zap, UserPlus, List,
-  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine,
+  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine, Plus,
 } from "lucide-react";
 
 type Lead = {
@@ -388,7 +388,7 @@ export default function Admin() {
             <ClientsTab clients={clients} pending={pending} invoiced={invoiced} expanded={expanded}
               setExpanded={setExpanded} handleInvoice={handleInvoice} authedPw={authedPw!} setClients={setClients} />
           ) : tab === "all-leads" ? (
-            <AllLeadsTab clients={clients} authedPw={authedPw!} />
+            <AllLeadsTab clients={clients} authedPw={authedPw!} setClients={setClients} />
           ) : tab === "invoice-queue" ? (
             <BillingTab authedPw={authedPw!} onInvoiceSent={() => fetchData(authedPw!)} />
           ) : tab === "outreach" ? (
@@ -579,7 +579,7 @@ const LEAD_STATUS_COLORS: Record<string, string> = {
   lost: "bg-red-50 text-red-400",
 };
 
-function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: string }) {
+function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; authedPw: string; setClients: React.Dispatch<React.SetStateAction<ClientRow[]>> }) {
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -588,6 +588,33 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
   const [noteDraft, setNoteDraft] = useState("");
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadNotes, setLeadNotes] = useState<Record<string, string | null>>({});
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addClientId, setAddClientId] = useState(clients[0]?.id ?? "");
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPhone, setAddPhone] = useState("");
+  const [addSource, setAddSource] = useState("manual");
+  const [addPrice, setAddPrice] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const submitAddLead = async () => {
+    if (!addName.trim()) { setAddError("Name is required"); return; }
+    if (!addClientId) { setAddError("Select a client"); return; }
+    setAddLoading(true); setAddError(null);
+    const r = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "add-lead-manual", clientId: addClientId, name: addName.trim(), email: addEmail.trim() || null, phone: addPhone.trim() || null, source: addSource || "manual", price: addPrice || undefined }),
+    });
+    setAddLoading(false);
+    if (!r.ok) { setAddError("Failed to add lead"); return; }
+    const { lead } = await r.json();
+    setClients(prev => prev.map(c => c.id === addClientId ? { ...c, leads: [lead, ...c.leads], leads_this_month: c.leads_this_month + 1 } : c));
+    setShowAddModal(false);
+    setAddName(""); setAddEmail(""); setAddPhone(""); setAddSource("manual"); setAddPrice(""); setAddError(null);
+  };
 
   const allLeads: FlatLead[] = clients
     .flatMap(c => c.leads.map(l => ({ ...l, clientName: c.company, clientId: c.id, currency: c.currency })))
@@ -631,12 +658,77 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
 
   return (
     <div className="space-y-6">
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Add lead</h2>
+              <button onClick={() => { setShowAddModal(false); setAddError(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500">Client</label>
+                <select value={addClientId} onChange={e => setAddClientId(e.target.value)}
+                  className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white">
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500">Name <span className="text-red-400">*</span></label>
+                <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="Jane Smith"
+                  className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">Email</label>
+                  <input value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="jane@example.com" type="email"
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">Phone</label>
+                  <input value={addPhone} onChange={e => setAddPhone(e.target.value)} placeholder="+44 7700 900000"
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">Source</label>
+                  <input value={addSource} onChange={e => setAddSource(e.target.value)} placeholder="manual"
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">Price (optional)</label>
+                  <input value={addPrice} onChange={e => setAddPrice(e.target.value)} placeholder="defaults to client rate" type="number"
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+              </div>
+            </div>
+            {addError && <p className="text-xs text-red-500">{addError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button onClick={submitAddLead} disabled={addLoading}
+                className="flex-1 h-10 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "hsl(252 89% 58%)" }}>
+                {addLoading ? "Adding…" : "Add lead"}
+              </button>
+              <button onClick={() => { setShowAddModal(false); setAddError(null); }}
+                className="h-10 px-4 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">All leads</h1>
           <p className="text-sm text-gray-400">{allLeads.length} leads across {clients.length} clients</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold text-white"
+            style={{ background: "hsl(252 89% 58%)" }}>
+            <Plus className="w-3.5 h-3.5" /> Add lead
+          </button>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads…"
@@ -2034,11 +2126,11 @@ function matchesEmployeeCount(employees: string | null, count: string): boolean 
   return n >= parseInt(parts[0]) && n <= parseInt(parts[1]);
 }
 
-const DANISH_CITIES = [
-  "København", "Aarhus", "Odense", "Aalborg", "Esbjerg", "Randers", "Kolding",
-  "Horsens", "Vejle", "Roskilde", "Helsingør", "Silkeborg", "Næstved", "Fredericia",
-  "Viborg", "Køge", "Holstebro", "Slagelse", "Hillerød", "Herning", "Sønderborg",
-  "Svendborg", "Hjørring", "Holbæk", "Frederikshavn", "Skive", "Thisted", "Ringsted",
+const UK_CITIES = [
+  "London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Sheffield", "Bradford",
+  "Edinburgh", "Liverpool", "Bristol", "Cardiff", "Coventry", "Nottingham", "Leicester",
+  "Newcastle", "Brighton", "Plymouth", "Stoke", "Southampton", "Derby", "Reading",
+  "Wolverhampton", "Preston", "Oxford", "Cambridge", "Norwich", "Swindon", "Exeter",
 ];
 
 type CvrResult = {
@@ -2116,7 +2208,7 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
     if (attempt === 0) { setResult(null); setNotFound(false); setUsed(false); }
     const cityMod = attempt === 0 && !city.trim()
       ? ""
-      : city.trim() || DANISH_CITIES[attempt % DANISH_CITIES.length];
+      : city.trim() || UK_CITIES[attempt % UK_CITIES.length];
     const q = cityMod ? `${query.trim()} ${cityMod}` : query.trim();
     try {
       const r = await fetch(`/api/admin?action=find-companies&q=${encodeURIComponent(q)}`);
@@ -2160,14 +2252,14 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
   const firstName = ownerName.split(" ")[0] ?? "";
   const address = result ? `${result.address}, ${result.zipcode} ${result.city}` : "";
   const websiteUrl = result?.homepage ?? null;
-  const googleUrl = result ? `https://www.google.com/search?q=${encodeURIComponent(result.name + " " + result.city + " hjemmeside")}` : "";
+  const googleUrl = result ? `https://www.google.co.uk/search?q=${encodeURIComponent(result.name + " " + (result.city ?? "") + " website")}` : "";
   const linkedInUrl = result ? `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(result.name)}` : "";
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-0.5">Company finder</p>
-        <p className="text-xs text-gray-400">Search the Danish company registry (CVR).</p>
+        <p className="text-xs text-gray-400">Search for UK companies by keyword and city.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -2175,14 +2267,14 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
           <label className="text-xs font-semibold text-gray-500">Keyword</label>
           <input value={query} onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && search()}
-            placeholder="VVS, tømrer, maler..."
+            placeholder="plumber, roofer, electrician..."
             className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-gray-500">City (optional)</label>
           <input value={city} onChange={e => setCity(e.target.value)}
             onKeyDown={e => e.key === "Enter" && search()}
-            placeholder="Odense, Aarhus..."
+            placeholder="Manchester, Bristol..."
             className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
         </div>
         <div className="flex flex-col gap-1.5 col-span-2">
@@ -2283,7 +2375,7 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
   const [companyName, setCompanyName] = useState("");
   const [industryVal, setIndustryVal] = useState(INDUSTRIES[0].value);
   const [customIndustry, setCustomIndustry] = useState("");
-  const [lang, setLang] = useState<LangCode>("da");
+  const [lang, setLang] = useState<LangCode>("en");
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [copiedBody, setCopiedBody] = useState(false);
   const [sending, setSending] = useState(false);
@@ -2300,7 +2392,7 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
   const label = isCustom ? customIndustry || "virksomhed" : selected.labels[lang];
   const subjectVariants = SUBJECT_VARIANTS[lang](label);
   const generatedSubject = companyName
-    ? `Mere vækst til ${companyName}`
+    ? SUBJECT_VARIANTS[lang](label)[0].replace(label, companyName)
     : subjectVariants[subjectIdx % subjectVariants.length];
   const { body: generatedBody } = MSG[lang](name, plural, label);
 
@@ -2326,8 +2418,8 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
     const industry = validIndustries[Math.floor(Math.random() * validIndustries.length)];
     for (let attempt = 0; attempt < 15; attempt++) {
       try {
-        const city = DANISH_CITIES[(Math.floor(Math.random() * DANISH_CITIES.length) + attempt) % DANISH_CITIES.length];
-        const q = `${industry.value} ${city}`;
+        const city = UK_CITIES[(Math.floor(Math.random() * UK_CITIES.length) + attempt) % UK_CITIES.length];
+        const q = `${industry.labels.en} ${city}`;
         const r = await fetch(`/api/admin?action=find-companies&q=${encodeURIComponent(q)}`);
         const d = await r.json();
         if (d.result?.name) {

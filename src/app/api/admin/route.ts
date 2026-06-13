@@ -172,40 +172,69 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true });
     }
 
-    // ── Company finder (no auth required - uses public CVR API) ──────────────
+    // ── Company finder (no auth required - searches UK companies via Nimble + Claude) ──────────────
     if (req.method === "GET" && action === "find-companies") {
       const q = searchParams.get("q") ?? "";
-      const vat = searchParams.get("vat") ?? "";
-      if (!q && !vat) return NextResponse.json({ error: "Query required" }, { status: 400 });
+      if (!q) return NextResponse.json({ result: null });
+
+      const nimbleKey = process.env.NIMBLE_API_KEY;
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      if (!nimbleKey || !anthropicKey) return NextResponse.json({ result: null });
+
       try {
-        const apiUrl = vat
-          ? `https://cvrapi.dk/api?vat=${encodeURIComponent(vat)}&country=dk`
-          : `https://cvrapi.dk/api?search=${encodeURIComponent(q)}&country=dk`;
-        const r = await fetch(apiUrl, { headers: { "User-Agent": "Markety/1.0 info@marketyleadgen.com" } });
-        if (!r.ok) return NextResponse.json({ result: null });
-        const data = await r.json();
+        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " UK small business email contact")}&gl=gb&hl=en&num=10`;
+        const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+          },
+          body: JSON.stringify({ url: searchUrl, render: false, format: "markdown", country: "GB" }),
+        });
+        if (!nimbleRes.ok) return NextResponse.json({ result: null });
+        const nimbleData = await nimbleRes.json();
+        const content = nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? nimbleData?.data?.text ?? "";
+        if (!content) return NextResponse.json({ result: null });
 
-        if (data.vat && !data.homepage) {
-          try {
-            const virk = await fetch("https://data.virk.dk/v1/cvr-permanent/virksomhed/_search", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "User-Agent": "Markety/1.0" },
-              body: JSON.stringify({
-                _source: ["Vrvirksomhed.hjemmeside"],
-                query: { term: { "Vrvirksomhed.cvrNummer": data.vat } },
-                size: 1,
-              }),
-            });
-            if (virk.ok) {
-              const virkData = await virk.json();
-              const hits = virkData?.hits?.hits ?? [];
-              const homepage = hits[0]?._source?.Vrvirksomhed?.hjemmeside?.[0]?.kontaktoplysning;
-              if (homepage) data.homepage = homepage.startsWith("http") ? homepage : `https://${homepage}`;
-            }
-          } catch { /* ignore - homepage stays null */ }
-        }
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const anthropic = new Anthropic({ apiKey: anthropicKey });
+        const msg = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 300,
+          messages: [{
+            role: "user",
+            content: `From these Google search results, extract ONE UK small business. Only include a business with an email address visible. Return compact JSON: {name, email, homepage, city, owner_first_name}. Use null for missing fields. Prefer .co.uk or .com emails. Reject any business with non-English TLD emails (.dk, .de, .se, .no, .fi, .fr, .nl, .pl). Return {"name":null} if nothing suitable found.\n\n${content.slice(0, 4000)}`,
+          }],
+        });
+        const rawText = (msg.content[0] as { type: string; text: string }).text.trim();
+        let parsed: Record<string, string | null>;
+        try {
+          const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
+          if (!jsonMatch) return NextResponse.json({ result: null });
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch { return NextResponse.json({ result: null }); }
 
-        return NextResponse.json({ result: data });
+        if (!parsed?.name) return NextResponse.json({ result: null });
+
+        const emailVal = (parsed.email ?? "").toLowerCase();
+        const BLOCKED_TLDS = [".dk", ".de", ".se", ".no", ".fi", ".nl", ".pl", ".cz", ".fr", ".it", ".es", ".pt", ".be", ".at"];
+        if (emailVal && BLOCKED_TLDS.some(tld => emailVal.endsWith(tld))) return NextResponse.json({ result: null });
+
+        return NextResponse.json({
+          result: {
+            name: parsed.name,
+            email: parsed.email ?? null,
+            homepage: parsed.homepage ?? null,
+            city: parsed.city ?? null,
+            zipcode: null,
+            address: null,
+            phone: null,
+            industrydesc: null,
+            employees: null,
+            owners: parsed.owner_first_name ? [{ name: parsed.owner_first_name }] : null,
+            vat: null,
+          },
+        });
       } catch {
         return NextResponse.json({ result: null });
       }
@@ -728,6 +757,24 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       const { error } = await supabase.from("leads").delete().eq("id", leadId);
       if (error) return NextResponse.json({ error: "Failed to delete lead" }, { status: 500 });
       return NextResponse.json({ success: true });
+    }
+
+    // ── Add lead manually ─────────────────────────────────────────────────────
+    if (req.method === "POST" && action === "add-lead-manual") {
+      const { clientId, name, email, phone, source, price } = body;
+      if (!clientId || !name) return NextResponse.json({ error: "clientId and name required" }, { status: 400 });
+      const { data: client } = await supabase.from("clients").select("price_per_lead").eq("id", clientId).single();
+      const { data: lead, error } = await supabase.from("leads").insert({
+        client_id: clientId,
+        name: (name as string).trim(),
+        email: (email as string | null) || null,
+        phone: (phone as string | null) || null,
+        source: (source as string | null) || "manual",
+        price: price != null && price !== "" ? Number(price) : (client?.price_per_lead ?? 0),
+        lead_status: "new",
+      }).select().single();
+      if (error) { console.error("Add lead manual error:", error); return NextResponse.json({ error: "Failed to add lead" }, { status: 500 }); }
+      return NextResponse.json({ lead });
     }
 
     // ── Toggle invoice paid ───────────────────────────────────────────────────
