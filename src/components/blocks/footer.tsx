@@ -18,7 +18,10 @@ export function Footer() {
     { name: "LinkedIn", href: "https://linkedin.com" },
     { name: "Email", href: "mailto:info@marketyleadgen.com" },
   ];
-  const legal = [{ name: "Privacy Policy", href: "/privacy" }];
+  const legal = [
+    { name: "Privacy Policy", href: "/privacy" },
+    { name: "Terms & Conditions", href: "/terms" },
+  ];
 
   return (
     <footer className="border-t pt-20 pb-10">
@@ -50,7 +53,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
-              Full-service lead generation. Paid ads, landing pages, email follow-ups — all managed for you.
+              Full-service lead generation. Paid ads, landing pages, email follow-ups - all managed for you.
             </p>
           </div>
 
@@ -104,7 +107,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-6 text-sm text-muted-foreground md:flex-row">
-          <span>© {new Date().getFullYear()} Markety. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} Markety. All rights reserved.</span>
           <ul className="flex gap-6">
             {legal.map((item) => (
               <li key={item.name}>

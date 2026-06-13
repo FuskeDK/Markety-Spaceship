@@ -20,15 +20,12 @@ const contactInfo = [
     title: "Email us",
     content: (
       <div className="mt-3">
-        <div>
-          <p className="">General enquiries</p>
-          <Link
-            href="mailto:info@marketyleadgen.com"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            info@marketyleadgen.com
-          </Link>
-        </div>
+        <Link
+          href="mailto:info@marketyleadgen.com"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          info@marketyleadgen.com
+        </Link>
       </div>
     ),
   },
@@ -61,7 +58,7 @@ export default function Contact() {
           Contact us
         </h1>
         <p className="text-muted-foreground mt-4 text-center leading-snug font-medium lg:mx-auto">
-          Tell us about your business and we'll get back to you within one business day.
+          Tell us about your business and we will get back to you within one business day.
         </p>
 
         <div className="mt-10 flex justify-between gap-8 max-sm:flex-col md:mt-14 lg:mt-20 lg:gap-12">
@@ -75,9 +72,8 @@ export default function Contact() {
 
         <DashedLine className="my-12" />
 
-        {/* Inquiry Form */}
         <div className="mx-auto">
-          <h2 className="mb-4 text-lg font-semibold">Inquiries</h2>
+          <h2 className="mb-4 text-lg font-semibold">Send us a message</h2>
           <ContactForm />
         </div>
       </div>

@@ -2,7 +2,7 @@ import { DashedLine } from "../dashed-line";
 import type { SiteStrings } from "@/i18n/site-translations";
 
 const CARD_DESCRIPTIONS = [
-  "Automated email sequences that warm up prospects, handle follow-ups, and book calls — without you lifting a finger.",
+  "Automated email sequences that warm up prospects, handle follow-ups, and book calls - without you lifting a finger.",
   "Google, Meta, and LinkedIn campaigns managed daily. We test, cut the losers, and scale what works.",
   "High-converting landing pages tailored to your audience, built and A/B tested until they perform.",
 ];
@@ -33,14 +33,12 @@ export const Features = ({ t }: { t: SiteStrings }) => {
               <div
                 key={i}
                 className={[
-                  "flex flex-col gap-4 p-7",
+                  "flex flex-col gap-5 p-7",
                   i < 2 ? "md:border-r" : "",
                   i < t.features.cards.length - 1 ? "border-b md:border-b-0" : "",
                 ].join(" ")}
               >
-                <span className="font-display select-none text-5xl font-bold leading-none text-purple-200 dark:text-purple-900">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <div className="size-2 rounded-full bg-purple-500" />
                 <div>
                   <h3 className="font-display text-xl font-bold tracking-tight">{title}</h3>
                   <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{CARD_DESCRIPTIONS[i]}</p>

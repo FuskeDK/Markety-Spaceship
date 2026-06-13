@@ -38,6 +38,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
+  // Enforce field length limits to prevent abuse and oversized DB writes
+  if (
+    String(name).length > 200 ||
+    String(email).length > 254 ||
+    String(company ?? "").length > 300 ||
+    String(companyDescription).length > 5000 ||
+    String(goals).length > 5000 ||
+    String(message ?? "").length > 10000
+  ) {
+    return NextResponse.json({ error: "Input too long" }, { status: 400 });
+  }
+
   // Save to Supabase
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);

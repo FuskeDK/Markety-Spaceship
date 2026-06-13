@@ -14,7 +14,7 @@ export const DashedLine = ({
   return (
     <div
       className={cn(
-        "text-muted-foreground relative",
+        "text-muted-foreground/60 relative",
         isHorizontal ? "h-px w-full" : "h-full w-px",
         className,
       )}
@@ -24,13 +24,13 @@ export const DashedLine = ({
           isHorizontal
             ? [
                 "h-px w-full",
-                "bg-[repeating-linear-gradient(90deg,transparent,transparent_4px,currentColor_4px,currentColor_10px)]",
-                "[mask-image:linear-gradient(90deg,transparent,black_25%,black_75%,transparent)]",
+                "bg-[repeating-linear-gradient(90deg,transparent,transparent_3px,currentColor_3px,currentColor_9px)]",
+                "[mask-image:linear-gradient(90deg,transparent,black_20%,black_80%,transparent)]",
               ]
             : [
                 "h-full w-px",
-                "bg-[repeating-linear-gradient(180deg,transparent,transparent_4px,currentColor_4px,currentColor_10px)]",
-                "[mask-image:linear-gradient(180deg,transparent,black_25%,black_75%,transparent)]",
+                "bg-[repeating-linear-gradient(180deg,transparent,transparent_3px,currentColor_3px,currentColor_9px)]",
+                "[mask-image:linear-gradient(180deg,transparent,black_20%,black_80%,transparent)]",
               ],
         )}
       />
