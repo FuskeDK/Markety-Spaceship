@@ -20,9 +20,7 @@ export default async function Home() {
       </Background>
       <StatsHero t={t} />
       <Testimonials />
-      <Background variant="bottom">
-        <FAQ t={t} />
-      </Background>
+      <FAQ t={t} />
     </>
   );
 }

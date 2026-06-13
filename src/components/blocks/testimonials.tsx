@@ -51,7 +51,7 @@ export const Testimonials = ({
             </div>
             <a
               href="/contact"
-              className="shrink-0 text-sm font-semibold text-purple-600 hover:underline"
+              className="shrink-0 text-sm font-semibold text-purple-600 hover:opacity-75 transition-opacity"
             >
               Work with us →
             </a>

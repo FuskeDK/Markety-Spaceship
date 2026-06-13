@@ -205,8 +205,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!nimbleKey) return res.status(500).json({ error: "Nimble API key not configured" });
 
     try {
-      // Search Google for a small English-speaking business matching this query
-      const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " small business contact email")}&gl=gb&hl=en&num=8`;
+      // Search Google UK for a small English-speaking business matching this query
+      const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " UK small business email")}&gl=gb&hl=en&num=8`;
       const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
         method: "POST",
         headers: {
@@ -227,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         max_tokens: 350,
         messages: [{
           role: "user",
-          content: `From these Google search results, extract the FIRST small local business that appears to have 1-3 employees (owner-operated, sole trader, family business, one-man band, etc.). Skip large chains, franchises, and any business that obviously has more than 5 employees.
+          content: `From these Google search results, extract the FIRST small local business in the UK, US, or Australia that appears to have 1-3 employees (owner-operated, sole trader, family business, one-man band, etc.). Skip large chains, franchises, and any business that obviously has more than 5 employees. IMPORTANT: Only extract businesses from English-speaking countries (UK, US, Australia, Canada). If a business appears to be from Denmark, Germany, Sweden, Norway, or any non-English-speaking country, skip it entirely and return {"result":null}.
 
 Return ONLY a valid JSON object — no explanation, no markdown fences:
 {
@@ -242,7 +242,7 @@ Return ONLY a valid JSON object — no explanation, no markdown fences:
   "owners": [{"name": "John Smith"}]
 }
 
-If you cannot find a suitable micro-business, return exactly: {"result":null}
+If you cannot find a suitable English-speaking micro-business, return exactly: {"result":null}
 
 Search results:
 ${searchText}`,

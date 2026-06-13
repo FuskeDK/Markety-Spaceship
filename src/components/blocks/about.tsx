@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Target, Users, TrendingUp, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const HOW_WE_WORK_STEPS = [
   {
@@ -50,40 +49,68 @@ const VALUES = [
 const About = () => {
   return (
     <div>
-      <section className="container mt-10 flex max-w-5xl flex-col-reverse gap-8 md:mt-14 md:gap-14 lg:mt-20 lg:flex-row lg:items-end">
-        <div className="flex flex-col gap-8 lg:gap-16 xl:gap-20">
-          <ImageSection
-            images={[
-              { src: "/about/1.webp", alt: "Team collaboration" },
-              { src: "/about/2.webp", alt: "Team workspace" },
-            ]}
-            className="xl:-translate-x-10"
-          />
-          <TextSection
-            title="The team"
-            paragraphs={[
-              "We started Markety to solve a problem we kept seeing: companies spending money on ads without a reliable, repeatable way to turn clicks into qualified conversations.",
-              "We are a small, focused team based in Denmark. We keep things lean so we can move fast and stay close to our clients. Every campaign we run is built and managed by people who care about results, not just delivery.",
-              "If you want to work with a team that treats your pipeline like it's our own, get in touch.",
-            ]}
-            ctaButton={{ href: "/contact", text: "Get in touch" }}
-          />
+      {/* Mission intro - text only, no images */}
+      <section className="container max-w-5xl mt-10 md:mt-16 lg:mt-20">
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-20 lg:items-start">
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+              About us
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              We build lead machines for businesses serious about growth.
+            </h2>
+          </div>
+          <div className="text-muted-foreground space-y-5 text-lg leading-relaxed">
+            <p>
+              At Markety, we are dedicated to one thing: delivering qualified leads to your sales team. Our mission is to give every business access to the kind of full-funnel lead generation system that only the best-resourced companies used to afford.
+            </p>
+            <p>
+              We are customer-obsessed - investing the time to understand every aspect of your business before we build anything. We work on a pay-per-lead model because we believe in earning our keep. We don't win unless you do.
+            </p>
+          </div>
         </div>
+      </section>
 
-        <div className="flex flex-col gap-8 lg:gap-16 xl:gap-20">
-          <TextSection
-            paragraphs={[
-              "At Markety, we are dedicated to one thing: delivering qualified leads to your sales team. Our mission is to give every business access to the kind of full-funnel lead generation system that only the best-resourced companies used to afford.",
-              "We are customer-obsessed - investing the time to understand every aspect of your business before we build anything. We work on a pay-per-lead model because we believe in earning our keep. We don't win unless you do.",
-            ]}
-          />
-          <ImageSection
-            images={[
-              { src: "/about/3.webp", alt: "Modern workspace" },
-              { src: "/about/4.webp", alt: "Team collaboration" },
-            ]}
-            className="hidden lg:flex xl:translate-x-10"
-          />
+      {/* Three images - portrait row with offset middle */}
+      <section className="container max-w-5xl mt-12 md:mt-16">
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/1.webp" alt="Team at work" fill className="object-cover" />
+          </div>
+          <div className="relative overflow-hidden rounded-2xl mt-8 md:mt-12" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/2.webp" alt="Campaign work" fill className="object-cover" />
+          </div>
+          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/3.webp" alt="Team environment" fill className="object-cover" />
+          </div>
+        </div>
+      </section>
+
+      {/* Team section - simple 2-col: text left, image right */}
+      <section className="container max-w-5xl mt-20 md:mt-28">
+        <div className="grid gap-10 md:grid-cols-2 md:items-center md:gap-16">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">The team</h2>
+            <div className="text-muted-foreground mt-6 space-y-4 text-lg leading-relaxed">
+              <p>
+                We started Markety to solve a problem we kept seeing: companies spending money on ads without a reliable, repeatable way to turn clicks into qualified conversations.
+              </p>
+              <p>
+                We are a small, focused team based in Denmark. We keep things lean so we can move fast and stay close to our clients. Every campaign we run is built and managed by people who care about results, not just delivery.
+              </p>
+              <p>
+                If you want to work with a team that treats your pipeline like it's our own, get in touch.
+              </p>
+            </div>
+            <div className="mt-8">
+              <Link href="/contact">
+                <Button size="lg">Get in touch</Button>
+              </Link>
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/5" }}>
+            <Image src="/about/4.webp" alt="Our team" fill className="object-cover" />
+          </div>
         </div>
       </section>
 
@@ -167,61 +194,3 @@ const About = () => {
 };
 
 export default About;
-
-interface ImageSectionProps {
-  images: { src: string; alt: string }[];
-  className?: string;
-}
-
-export function ImageSection({ images, className }: ImageSectionProps) {
-  return (
-    <div className={cn("flex flex-col gap-6", className)}>
-      {images.map((image, index) => (
-        <div
-          key={index}
-          className="relative aspect-[2/1.5] overflow-hidden rounded-2xl"
-        >
-          <Image
-            src={image.src}
-            alt={image.alt}
-            fill
-            className="object-cover"
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface TextSectionProps {
-  title?: string;
-  paragraphs: string[];
-  ctaButton?: {
-    href: string;
-    text: string;
-  };
-}
-
-export function TextSection({
-  title,
-  paragraphs,
-  ctaButton,
-}: TextSectionProps) {
-  return (
-    <section className="flex-1 space-y-4 text-lg md:space-y-6">
-      {title && <h2 className="text-foreground text-4xl">{title}</h2>}
-      <div className="text-muted-foreground max-w-xl space-y-6">
-        {paragraphs.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
-      </div>
-      {ctaButton && (
-        <div className="mt-8">
-          <Link href={ctaButton.href}>
-            <Button size="lg">{ctaButton.text}</Button>
-          </Link>
-        </div>
-      )}
-    </section>
-  );
-}

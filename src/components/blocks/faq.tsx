@@ -26,7 +26,7 @@ export const FAQ = ({
           )}
           <p className="text-muted-foreground mt-4 text-lg leading-snug">
             {t.faq.subheading}{" "}
-            <Link href="/contact" className="text-foreground underline underline-offset-4 hover:opacity-75 transition-opacity">
+            <Link href="/contact" className="text-foreground hover:opacity-75 transition-opacity">
               {t.faq.subheadingLink}
             </Link>
             .
