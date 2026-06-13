@@ -589,6 +589,21 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadNotes, setLeadNotes] = useState<Record<string, string | null>>({});
 
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+  const duplicateLead = async (lead: FlatLead) => {
+    setDuplicatingId(lead.id);
+    const r = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "add-lead-manual", clientId: lead.clientId, name: lead.name, email: lead.email, phone: lead.phone, source: lead.source ?? "manual" }),
+    });
+    setDuplicatingId(null);
+    if (!r.ok) return;
+    const { lead: newLead } = await r.json();
+    setClients(prev => prev.map(c => c.id === lead.clientId ? { ...c, leads: [newLead, ...c.leads], leads_this_month: c.leads_this_month + 1 } : c));
+  };
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [addClientId, setAddClientId] = useState(clients[0]?.id ?? "");
   const [addName, setAddName] = useState("");
@@ -771,13 +786,20 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
               const notes = getNotes(lead);
               const isEditingNote = editingNoteId === lead.id;
               return (
-                <div key={lead.id} className="px-4 py-3 space-y-2 hover:bg-gray-50 transition-colors">
+                <div key={lead.id} className="px-4 py-3 space-y-2 group hover:bg-gray-50 transition-colors">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-gray-400 shrink-0">{fmt(lead.created_at)}</span>
                     <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">{lead.clientName}</span>
                     <span className="text-sm font-medium text-gray-800">{lead.name ?? "-"}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
                     <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{lead.source ?? "website"}</span>
+                    <button
+                      onClick={() => duplicateLead(lead)}
+                      disabled={duplicatingId === lead.id}
+                      title="Duplicate lead"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-gray-400 hover:text-purple-600 px-2 py-0.5 rounded border border-gray-200 hover:border-purple-200 bg-white disabled:opacity-40">
+                      <Copy className="w-3 h-3" />{duplicatingId === lead.id ? "…" : "Duplicate"}
+                    </button>
                   </div>
                   <div className="flex flex-wrap gap-3 items-center">
                     {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-gray-500 hover:text-purple-600"><Mail className="w-3 h-3" />{lead.email}</a>}

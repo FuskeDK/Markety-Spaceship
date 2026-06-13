@@ -521,7 +521,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
-  const [tab, setTab] = useState<"overview" | "analytics" | "invoices" | "campaigns" | "account" | "beskeder" | "produkter" | "ordrer">("overview");
+  const [tab, setTab] = useState<"overview" | "analytics" | "invoices" | "campaigns" | "leads" | "account" | "beskeder" | "produkter" | "ordrer">("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -679,6 +679,7 @@ const Dashboard = () => {
     { id: "analytics" as const, label: t(lang, "tabAnalytics"), icon: BarChart3, blink: false },
     { id: "invoices" as const, label: t(lang, "tabInvoices"), icon: Receipt, blink: false },
     { id: "campaigns" as const, label: t(lang, "tabCampaigns"), icon: Megaphone, blink: false },
+    { id: "leads" as const, label: "Leads", icon: Users, blink: false },
     ...(isNordicSolfilm ? [{ id: "beskeder" as const, label: "Beskeder", icon: Mail, blink: hasNewBeskeder }] : []),
     ...(isMyTrendyPhone ? [
       { id: "produkter" as const, label: "Produkter", icon: Package, blink: false },
@@ -761,6 +762,7 @@ const Dashboard = () => {
           {tab === "analytics" && <AnalyticsTab leads={leads} lang={lang} locale={locale} />}
           {tab === "invoices" && <InvoicesTab leads={leads} client={client} invoices={invoices} lang={lang} locale={locale} />}
           {tab === "campaigns" && <CampaignsTab leads={leads} client={client} lang={lang} locale={locale} />}
+          {tab === "leads" && <ClientLeadsTab leads={leads} lang={lang} locale={locale} />}
           {tab === "beskeder" && <BeskeederTab />}
           {tab === "produkter" && <ProdukterTab token={token!} />}
           {tab === "ordrer" && <OrdrerTab orders={orders} token={token!} onOrderUpdated={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} />}
@@ -1230,6 +1232,100 @@ function InvoicesTab({ invoices, client, lang, locale }: { leads: Lead[]; client
   );
 }
 
+const LEAD_STATUS_COLORS_CLIENT: Record<string, string> = {
+  new: "bg-blue-50 text-blue-700",
+  contacted: "bg-amber-50 text-amber-700",
+  converted: "bg-green-50 text-green-700",
+  lost: "bg-gray-100 text-gray-500",
+};
+const LEAD_STATUS_LABELS_CLIENT: Record<string, string> = {
+  new: "New",
+  contacted: "Contacted",
+  converted: "Converted",
+  lost: "Lost",
+};
+
+function ClientLeadsTab({ leads, lang, locale }: { leads: Lead[]; lang: string; locale: string }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = leads.filter(l => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      l.name?.toLowerCase().includes(q) ||
+      l.email?.toLowerCase().includes(q) ||
+      l.phone?.includes(q) ||
+      (l.source ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Leads</h1>
+        <p className="text-sm text-gray-400">All leads generated for your account.</p>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+        className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search leads…"
+              className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200"
+            />
+          </div>
+          <span className="text-xs text-gray-400 shrink-0">{filtered.length} lead{filtered.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {leads.length === 0 ? (
+          <div className="py-20 text-center text-sm text-gray-400">No leads yet.</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center text-sm text-gray-400">No leads match your search.</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {filtered.map((lead, i) => {
+              const status = lead.lead_status ?? "new";
+              return (
+                <motion.div key={lead.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ delay: Math.min(i * 0.02, 0.2) }}
+                  className="px-5 py-3.5">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-400 shrink-0">
+                      {new Date(lead.created_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    <span className="text-sm font-medium text-gray-800">{lead.name ?? "-"}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS_CLIENT[status] ?? "bg-gray-100 text-gray-500"}`}>
+                      {LEAD_STATUS_LABELS_CLIENT[status] ?? status}
+                    </span>
+                    {lead.source && (
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full capitalize">{lead.source}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {lead.email && (
+                      <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-gray-500 hover:opacity-75 transition-opacity">
+                        <Mail className="w-3 h-3" />{lead.email}
+                      </a>
+                    )}
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-gray-500 hover:opacity-75 transition-opacity">
+                        <Phone className="w-3 h-3" />{lead.phone}
+                      </a>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 function CampaignsTab({ leads, client, lang, locale }: { leads: Lead[]; client: Client; lang: string; locale: string }) {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1239,7 +1335,7 @@ function CampaignsTab({ leads, client, lang, locale }: { leads: Lead[]; client: 
   const lastLead = leads[0] ? new Date(leads[0].created_at) : null;
   const daysSinceLastLead = lastLead ? Math.floor((Date.now() - lastLead.getTime()) / (1000 * 60 * 60 * 24)) : null;
   const isActive = daysSinceLastLead !== null && daysSinceLastLead < 30;
-  const sources = [...new Set(leads.map(l => l.source ?? "website"))];
+  const sourceData = buildSourceData(leads);
 
   const pacing = leadsLastMonth > 0
     ? Math.round((leadsThisMonth / leadsLastMonth) * 100)
@@ -1294,14 +1390,15 @@ function CampaignsTab({ leads, client, lang, locale }: { leads: Lead[]; client: 
           </div>
         </div>
 
-        {sources.length > 0 && (
+        {sourceData.length > 0 && (
           <div>
             <p className="text-xs text-gray-400 mb-2">{t(lang, "activeChannels")}</p>
             <div className="flex flex-wrap gap-2">
-              {sources.map(src => (
-                <span key={src} className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full capitalize">
+              {sourceData.map(({ source, count }) => (
+                <span key={source} className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full capitalize">
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
-                  {src}
+                  {source}
+                  <span className="text-purple-600 font-semibold">{count}</span>
                 </span>
               ))}
             </div>
