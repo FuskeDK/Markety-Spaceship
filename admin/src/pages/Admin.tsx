@@ -2333,6 +2333,7 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
     setResearchDone(false);
     const validIndustries = INDUSTRIES.filter(i => i.value !== "other");
     const industry = validIndustries[Math.floor(Math.random() * validIndustries.length)];
+    let fallback: { result: CvrResult; industry: typeof industry } | null = null;
     for (let attempt = 0; attempt < 15; attempt++) {
       try {
         const city = ENGLISH_CITIES[(Math.floor(Math.random() * ENGLISH_CITIES.length) + attempt) % ENGLISH_CITIES.length];
@@ -2341,15 +2342,26 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
         const d = await r.json();
         if (d.result?.name) {
           const alreadyContacted = d.result.vat && getContacted().has(d.result.vat);
-          if (alreadyContacted || !d.result.email) continue;
+          if (alreadyContacted) continue;
+          if (!d.result.email) {
+            if (!fallback) fallback = { result: d.result, industry };
+            continue;
+          }
           setAutoResult(d.result);
           const ownerName = d.result.owners?.[0]?.name ?? "";
           const firstName = ownerName.split(" ")[0] ?? "";
-          handleSelect(firstName, industry.value, d.result.email ?? "", d.result.name);
+          handleSelect(firstName, industry.value, d.result.email, d.result.name);
           setAutoLoading(false);
           return;
         }
       } catch { /* try next city */ }
+    }
+    // Use no-email fallback if we found a company but couldn't get its email
+    if (fallback) {
+      setAutoResult(fallback.result);
+      const ownerName = fallback.result.owners?.[0]?.name ?? "";
+      const firstName = ownerName.split(" ")[0] ?? "";
+      handleSelect(firstName, fallback.industry.value, "", fallback.result.name);
     }
     setAutoLoading(false);
   };

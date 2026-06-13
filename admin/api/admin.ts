@@ -263,23 +263,26 @@ ${searchText}`,
       const nameVal = (parsed.name as string || "").toLowerCase();
       if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return res.status(200).json({ result: null });
 
-      // If we have a website but no email, scrape the contact page
+      // If we have a website but no email, scrape homepage → /contact → /contact-us
       if (parsed.homepage && !parsed.email) {
-        try {
-          const contactUrl = (parsed.homepage as string).replace(/\/$/, "") + "/contact";
-          const contactRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
-            },
-            body: JSON.stringify({ url: contactUrl, render: false, format: "markdown", country: "GB" }),
-          });
-          const contactData = await contactRes.json();
-          const contactText = (contactData?.parsing?.markdown ?? contactData?.data?.markdown ?? "") as string;
-          const emailMatch = contactText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-          if (emailMatch) parsed.email = emailMatch[0];
-        } catch { /* email stays null */ }
+        const base = (parsed.homepage as string).replace(/\/$/, "");
+        const pagesToTry = [base, `${base}/contact`, `${base}/contact-us`];
+        for (const pageUrl of pagesToTry) {
+          try {
+            const pageRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+              },
+              body: JSON.stringify({ url: pageUrl, render: false, format: "markdown", country: "GB" }),
+            });
+            const pageData = await pageRes.json();
+            const pageText = (pageData?.parsing?.markdown ?? pageData?.data?.markdown ?? "") as string;
+            const emailMatch = pageText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            if (emailMatch) { parsed.email = emailMatch[0]; break; }
+          } catch { /* try next page */ }
+        }
       }
 
       return res.status(200).json({
