@@ -84,7 +84,7 @@ const bottomItems = [
       "Your sales team gets a steady stream of people who are already interested and fully qualified.",
     images: [
       {
-        src: "/resource-allocation/discussions.webp",
+        src: "/resource-allocation/discussions.png",
         alt: "Lead conversations",
         width: 320,
         height: 103,
