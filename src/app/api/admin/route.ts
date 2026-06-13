@@ -178,11 +178,10 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       if (!q) return NextResponse.json({ result: null });
 
       const nimbleKey = process.env.NIMBLE_API_KEY;
-      const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      if (!nimbleKey || !anthropicKey) return NextResponse.json({ result: null });
+      if (!nimbleKey) return NextResponse.json({ result: null });
 
       try {
-        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " UK small business email contact")}&gl=gb&hl=en&num=10`;
+        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " UK small business email")}&gl=gb&hl=en&num=8`;
         const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
           method: "POST",
           headers: {
@@ -191,47 +190,82 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
           },
           body: JSON.stringify({ url: searchUrl, render: false, format: "markdown", country: "GB" }),
         });
-        if (!nimbleRes.ok) return NextResponse.json({ result: null });
         const nimbleData = await nimbleRes.json();
-        const content = nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? nimbleData?.data?.text ?? "";
-        if (!content) return NextResponse.json({ result: null });
+        const searchText = ((nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? "") as string).slice(0, 5000);
+        if (!searchText) return NextResponse.json({ result: null });
 
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
-        const anthropic = new Anthropic({ apiKey: anthropicKey });
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
         const msg = await anthropic.messages.create({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 300,
+          max_tokens: 350,
           messages: [{
             role: "user",
-            content: `From these Google search results, extract ONE UK small business. Only include a business with an email address visible. Return compact JSON: {name, email, homepage, city, owner_first_name}. Use null for missing fields. Prefer .co.uk or .com emails. Reject any business with non-English TLD emails (.dk, .de, .se, .no, .fi, .fr, .nl, .pl). Return {"name":null} if nothing suitable found.\n\n${content.slice(0, 4000)}`,
+            content: `From these Google search results, extract the FIRST small local business in the UK, US, or Australia that appears to have 1-3 employees (owner-operated, sole trader, family business, one-man band, etc.). Skip large chains, franchises, and any business that obviously has more than 5 employees. IMPORTANT: Only extract businesses from English-speaking countries (UK, US, Australia, Canada). If a business appears to be from Denmark, Germany, Sweden, Norway, or any non-English-speaking country, skip it entirely and return {"result":null}.
+
+Return ONLY a valid JSON object — no explanation, no markdown fences:
+{
+  "name": "Business Name",
+  "email": "info@example.com or null",
+  "phone": "+44 7700 000000 or null",
+  "homepage": "https://example.com or null",
+  "city": "London",
+  "address": "123 High Street, London",
+  "employees": "1-2",
+  "industrydesc": "Plumbing services",
+  "owners": [{"name": "John Smith"}]
+}
+
+If you cannot find a suitable English-speaking micro-business, return exactly: {"result":null}
+
+Search results:
+${searchText}`,
           }],
         });
-        const rawText = (msg.content[0] as { type: string; text: string }).text.trim();
-        let parsed: Record<string, string | null>;
-        try {
-          const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
-          if (!jsonMatch) return NextResponse.json({ result: null });
-          parsed = JSON.parse(jsonMatch[0]);
-        } catch { return NextResponse.json({ result: null }); }
 
-        if (!parsed?.name) return NextResponse.json({ result: null });
+        const raw = (msg.content[0] as { type: string; text: string }).text.trim();
+        let parsed: Record<string, unknown> | null = null;
+        try { parsed = JSON.parse(raw); } catch { return NextResponse.json({ result: null }); }
+        if (!parsed || parsed.result === null || !parsed.name) return NextResponse.json({ result: null });
 
-        const emailVal = (parsed.email ?? "").toLowerCase();
-        const BLOCKED_TLDS = [".dk", ".de", ".se", ".no", ".fi", ".nl", ".pl", ".cz", ".fr", ".it", ".es", ".pt", ".be", ".at"];
+        const emailVal = ((parsed.email as string | null) ?? "").toLowerCase();
+        const BLOCKED_TLDS = [".dk", ".de", ".se", ".no", ".fi", ".nl", ".pl", ".cz", ".hu", ".fr", ".it", ".es", ".pt", ".ru", ".cn", ".jp", ".be", ".at"];
         if (emailVal && BLOCKED_TLDS.some(tld => emailVal.endsWith(tld))) return NextResponse.json({ result: null });
+
+        const nameVal = ((parsed.name as string) ?? "").toLowerCase();
+        if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return NextResponse.json({ result: null });
+
+        // If homepage but no email, try scraping /contact page
+        if (parsed.homepage && !parsed.email) {
+          try {
+            const contactUrl = (parsed.homepage as string).replace(/\/$/, "") + "/contact";
+            const contactRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+              },
+              body: JSON.stringify({ url: contactUrl, render: false, format: "markdown", country: "GB" }),
+            });
+            const contactData = await contactRes.json();
+            const contactText = (contactData?.parsing?.markdown ?? contactData?.data?.markdown ?? "") as string;
+            const emailMatch = contactText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            if (emailMatch) parsed.email = emailMatch[0];
+          } catch { /* email stays null */ }
+        }
 
         return NextResponse.json({
           result: {
-            name: parsed.name,
+            name: parsed.name ?? "",
             email: parsed.email ?? null,
+            phone: parsed.phone ?? null,
             homepage: parsed.homepage ?? null,
-            city: parsed.city ?? null,
-            zipcode: null,
-            address: null,
-            phone: null,
-            industrydesc: null,
-            employees: null,
-            owners: parsed.owner_first_name ? [{ name: parsed.owner_first_name }] : null,
+            city: parsed.city ?? "",
+            zipcode: "",
+            address: parsed.address ?? "",
+            industrydesc: parsed.industrydesc ?? null,
+            employees: (parsed.employees as string) ?? "1-3",
+            owners: parsed.owners ?? null,
             vat: null,
           },
         });
