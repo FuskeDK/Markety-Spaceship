@@ -182,6 +182,10 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
         console.error("find-companies: SERPER_API_KEY not set");
         return NextResponse.json({ result: null });
       }
+      if (!process.env.ANTHROPIC_API_KEY) {
+        console.error("find-companies: ANTHROPIC_API_KEY not set");
+        return NextResponse.json({ result: null });
+      }
 
       try {
         // Serper.dev — Google Search JSON API
@@ -288,7 +292,7 @@ ${searchText}`,
           },
         });
       } catch (err) {
-        console.error("find-companies error:", err);
+        console.error("find-companies error:", err instanceof Error ? err.message : String(err));
         return NextResponse.json({ result: null });
       }
     }
