@@ -46,7 +46,7 @@ export const Hero = ({ t }: { t: SiteStrings }) => {
         })}
       </div>
 
-      <div className="mt-12 max-lg:ml-6 max-lg:h-[550px] max-lg:overflow-hidden md:mt-16 lg:container lg:mt-20">
+      <div className="hidden lg:block mt-12 lg:container lg:mt-20">
         <div className="relative h-[793px] w-full">
           <Image src="/hero.png" alt="hero" fill className="rounded-2xl object-cover object-left-top shadow-lg max-lg:rounded-tr-none" />
         </div>
