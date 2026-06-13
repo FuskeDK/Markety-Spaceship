@@ -708,11 +708,24 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
 
   const FIRST_NAMES = ["James","Oliver","Harry","Jack","George","Noah","Charlie","Jacob","Alfie","Freddie","Isla","Olivia","Amelia","Emily","Ava","Sophia","Grace","Lily","Mia","Poppy"];
   const LAST_NAMES = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Wilson","Taylor","Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Moore","Lee","Walker"];
+  const EMAIL_DOMAINS = ["gmail.com","hotmail.com","outlook.com","yahoo.com","icloud.com","btinternet.com","sky.com","hotmail.co.uk","live.co.uk"];
   const submitRandomLead = async () => {
     const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
     const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
     const name = `${first} ${last}`;
-    const email = `${first.toLowerCase()}.${last.toLowerCase()}${Math.floor(Math.random() * 99) + 1}@gmail.com`;
+    const f = first.toLowerCase(), l = last.toLowerCase();
+    const domain = EMAIL_DOMAINS[Math.floor(Math.random() * EMAIL_DOMAINS.length)];
+    const birthYear = 1965 + Math.floor(Math.random() * 35);
+    const patterns = [
+      `${f}.${l}@${domain}`,
+      `${f}${l}@${domain}`,
+      `${f}_${l}@${domain}`,
+      `${f}.${l}${birthYear}@${domain}`,
+      `${f[0]}${l}@${domain}`,
+      `${f}${l[0]}@${domain}`,
+      `${l}.${f}@${domain}`,
+    ];
+    const email = patterns[Math.floor(Math.random() * patterns.length)];
     const phone = `+44 7${Math.floor(Math.random() * 9)}${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`;
     const source = randomSource.trim() || "order";
     setRandomLoading(true);
