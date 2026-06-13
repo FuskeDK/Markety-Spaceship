@@ -172,43 +172,41 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true });
     }
 
-    // ── Company finder (Brave Search API + Claude) ────────────────────────────
+    // ── Company finder (Serper.dev Google Search + Claude) ───────────────────
     if (req.method === "GET" && action === "find-companies") {
       const q = searchParams.get("q") ?? "";
       if (!q) return NextResponse.json({ result: null });
 
-      const braveKey = process.env.BRAVE_SEARCH_API_KEY;
-      if (!braveKey) {
-        console.error("find-companies: BRAVE_SEARCH_API_KEY not set");
+      const serperKey = process.env.SERPER_API_KEY;
+      if (!serperKey) {
+        console.error("find-companies: SERPER_API_KEY not set");
         return NextResponse.json({ result: null });
       }
 
       try {
-        // Brave Search API — designed for server-side use
-        const braveRes = await fetch(
-          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q + " contact email UK")}&count=10&country=GB&search_lang=en`,
-          {
-            headers: {
-              "Accept": "application/json",
-              "Accept-Encoding": "gzip",
-              "X-Subscription-Token": braveKey,
-            },
-          }
-        );
-        if (!braveRes.ok) {
-          console.error("find-companies: Brave Search returned status", braveRes.status, await braveRes.text());
+        // Serper.dev — Google Search JSON API
+        const serperRes = await fetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-KEY": serperKey,
+          },
+          body: JSON.stringify({ q: q + " contact email", gl: "gb", hl: "en", num: 10 }),
+        });
+        if (!serperRes.ok) {
+          console.error("find-companies: Serper returned status", serperRes.status, await serperRes.text());
           return NextResponse.json({ result: null });
         }
-        const braveData = await braveRes.json() as {
-          web?: { results?: Array<{ title: string; url: string; description?: string; extra_snippets?: string[] }> };
+        const serperData = await serperRes.json() as {
+          organic?: Array<{ title: string; link: string; snippet?: string; sitelinks?: Array<{ title: string; link: string }> }>;
         };
-        const results = braveData.web?.results ?? [];
+        const results = serperData.organic ?? [];
         if (results.length === 0) {
-          console.error("find-companies: Brave Search returned no results");
+          console.error("find-companies: Serper returned no results");
           return NextResponse.json({ result: null });
         }
         const searchText = results
-          .map(r => `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.description ?? ""}\n${(r.extra_snippets ?? []).join(" ")}`)
+          .map(r => `Title: ${r.title}\nURL: ${r.link}\nSnippet: ${r.snippet ?? ""}`)
           .join("\n---\n")
           .slice(0, 6000);
 
