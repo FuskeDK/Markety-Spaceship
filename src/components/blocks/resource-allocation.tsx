@@ -20,21 +20,22 @@ export const ResourceAllocation = ({ t }: { t: SiteStrings }) => {
               <div
                 key={i}
                 className={cn(
-                  "flex flex-col gap-5 rounded-2xl border border-border p-6 lg:p-8",
-                  i === 4 && "md:col-span-2 md:flex-row md:items-center md:gap-12 lg:col-span-1 lg:flex-col lg:items-start lg:gap-5",
+                  "group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-muted/70 to-muted/20 p-6 lg:p-8",
+                  i === 4 && "md:col-span-2",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="inline-flex size-10 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 ring-1 ring-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400">
+                <span className="pointer-events-none absolute -bottom-5 right-3 select-none font-black leading-none text-foreground/[0.05] text-[6rem] lg:text-[7.5rem]">
+                  {i + 1}
+                </span>
+
+                <div className="relative flex flex-col gap-6">
+                  <div className="inline-flex size-11 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 ring-1 ring-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400">
                     <Icon className="size-5" />
                   </div>
-                  <span className="font-mono text-xs tracking-widest text-muted-foreground">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <div className={cn(i === 4 && "md:flex-1 lg:flex-none")}>
-                  <h3 className="font-semibold text-foreground">{step.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">{step.title}</h3>
+                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+                  </div>
                 </div>
               </div>
             );
