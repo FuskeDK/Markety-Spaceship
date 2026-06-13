@@ -1085,11 +1085,14 @@ ${searchText}`,
 
     // ── Update lead ──────────────────────────────────────────────────────────
     if (req.method === "POST" && action === "update-lead") {
-      const { leadId, lead_status, lead_notes } = body;
+      const { leadId, lead_status, lead_notes, name, email, phone } = body;
       if (!leadId) return NextResponse.json({ error: "leadId required" }, { status: 400 });
       const updates: Record<string, unknown> = {};
       if (lead_status !== undefined) updates.lead_status = lead_status;
       if (lead_notes !== undefined) updates.lead_notes = lead_notes;
+      if (name !== undefined) updates.name = name;
+      if (email !== undefined) updates.email = email;
+      if (phone !== undefined) updates.phone = phone;
       if (Object.keys(updates).length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
       const { error } = await supabase.from("leads").update(updates).eq("id", leadId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });

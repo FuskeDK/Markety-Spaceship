@@ -29,7 +29,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, Clock, Mail, Phone,
   Lock, Eye, EyeOff, LogOut, DollarSign, TrendingUp, Users, BarChart2,
   Copy, Check, Search, X, ExternalLink, Zap, UserPlus, List,
-  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine, Plus,
+  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine, Plus, Shuffle,
 } from "lucide-react";
 
 type Lead = {
@@ -590,6 +590,13 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
   const [leadNotes, setLeadNotes] = useState<Record<string, string | null>>({});
 
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<{ id: string; field: "name" | "email" | "phone" } | null>(null);
+  const [fieldDraft, setFieldDraft] = useState("");
+  const [leadEdits, setLeadEdits] = useState<Record<string, { name?: string; email?: string; phone?: string }>>({});
+  const [showRandomModal, setShowRandomModal] = useState(false);
+  const [randomClientId, setRandomClientId] = useState(clients[0]?.id ?? "");
+  const [randomSource, setRandomSource] = useState("order");
+  const [randomLoading, setRandomLoading] = useState(false);
 
   const duplicateLead = async (lead: FlatLead) => {
     setDuplicatingId(lead.id);
@@ -671,6 +678,43 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
     });
   };
 
+  const saveField = async (leadId: string, field: "name" | "email" | "phone", value: string) => {
+    const trimmed = value.trim();
+    setLeadEdits(prev => ({ ...prev, [leadId]: { ...prev[leadId], [field]: trimmed || null } }));
+    setEditingField(null);
+    await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "update-lead", leadId, [field]: trimmed || null }),
+    });
+  };
+
+  const getLeadVal = (lead: FlatLead, field: "name" | "email" | "phone") =>
+    field in (leadEdits[lead.id] ?? {}) ? leadEdits[lead.id][field] ?? null : lead[field];
+
+  const FIRST_NAMES = ["James","Oliver","Harry","Jack","George","Noah","Charlie","Jacob","Alfie","Freddie","Isla","Olivia","Amelia","Emily","Ava","Sophia","Grace","Lily","Mia","Poppy"];
+  const LAST_NAMES = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Wilson","Taylor","Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Moore","Lee","Walker"];
+  const submitRandomLead = async () => {
+    const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+    const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+    const name = `${first} ${last}`;
+    const email = `${first.toLowerCase()}.${last.toLowerCase()}${Math.floor(Math.random() * 99) + 1}@gmail.com`;
+    const phone = `+44 7${Math.floor(Math.random() * 9)}${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`;
+    const source = randomSource.trim() || "order";
+    setRandomLoading(true);
+    const r = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "add-lead-manual", clientId: randomClientId, name, email, phone, source }),
+    });
+    setRandomLoading(false);
+    if (!r.ok) return;
+    const { lead } = await r.json();
+    setClients(prev => prev.map(c => c.id === randomClientId ? { ...c, leads: [lead, ...c.leads], leads_this_month: c.leads_this_month + 1 } : c));
+    setShowRandomModal(false);
+    setRandomSource("order");
+  };
+
   return (
     <div className="space-y-6">
       {showAddModal && (
@@ -733,6 +777,42 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
           </div>
         </div>
       )}
+      {showRandomModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Random lead</h2>
+              <button onClick={() => setShowRandomModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-xs text-gray-400">Name, email and phone will be randomly generated.</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500">Client</label>
+                <select value={randomClientId} onChange={e => setRandomClientId(e.target.value)}
+                  className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white">
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500">Source <span className="font-normal text-gray-400">(leave empty for "order")</span></label>
+                <input value={randomSource} onChange={e => setRandomSource(e.target.value)} placeholder="order"
+                  className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={submitRandomLead} disabled={randomLoading}
+                className="flex-1 h-10 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "hsl(252 89% 58%)" }}>
+                {randomLoading ? "Adding…" : "Generate & add"}
+              </button>
+              <button onClick={() => setShowRandomModal(false)}
+                className="h-10 px-4 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">All leads</h1>
@@ -743,6 +823,10 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
             className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold text-white"
             style={{ background: "hsl(252 89% 58%)" }}>
             <Plus className="w-3.5 h-3.5" /> Add lead
+          </button>
+          <button onClick={() => { setRandomClientId(clients[0]?.id ?? ""); setShowRandomModal(true); }}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+            <Shuffle className="w-3.5 h-3.5" /> Random lead
           </button>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" />
@@ -785,12 +869,42 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
               const status = getStatus(lead);
               const notes = getNotes(lead);
               const isEditingNote = editingNoteId === lead.id;
+              const nameVal = getLeadVal(lead, "name");
+              const emailVal = getLeadVal(lead, "email");
+              const phoneVal = getLeadVal(lead, "phone");
+
+              const InlineField = ({ field, value, icon: Icon, href }: { field: "name" | "email" | "phone"; value: string | null; icon?: typeof Mail; href?: string }) => {
+                const isEditing = editingField?.id === lead.id && editingField?.field === field;
+                if (isEditing) return (
+                  <div className="flex items-center gap-1">
+                    <input value={fieldDraft} onChange={e => setFieldDraft(e.target.value)} autoFocus
+                      onKeyDown={e => { if (e.key === "Enter") saveField(lead.id, field, fieldDraft); if (e.key === "Escape") setEditingField(null); }}
+                      className="h-6 px-2 text-xs rounded border border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300 w-36" />
+                    <button onClick={() => saveField(lead.id, field, fieldDraft)} className="text-xs text-purple-600 font-medium hover:opacity-75">Save</button>
+                    <button onClick={() => setEditingField(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                  </div>
+                );
+                const text = value ?? (field === "name" ? "-" : null);
+                if (!text) return (
+                  <button onClick={() => { setEditingField({ id: lead.id, field }); setFieldDraft(""); }}
+                    className="text-xs text-gray-300 hover:text-purple-500 transition-colors">+ {field}</button>
+                );
+                return (
+                  <button onClick={() => { setEditingField({ id: lead.id, field }); setFieldDraft(value ?? ""); }}
+                    className={`flex items-center gap-1 text-xs hover:text-purple-600 transition-colors group/field ${field === "name" ? "text-gray-800 font-medium text-sm" : "text-gray-500"}`}>
+                    {Icon && <Icon className="w-3 h-3 shrink-0" />}
+                    {text}
+                    <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/field:opacity-50" />
+                  </button>
+                );
+              };
+
               return (
                 <div key={lead.id} className="px-4 py-3 space-y-2 group hover:bg-gray-50 transition-colors">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-gray-400 shrink-0">{fmt(lead.created_at)}</span>
                     <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">{lead.clientName}</span>
-                    <span className="text-sm font-medium text-gray-800">{lead.name ?? "-"}</span>
+                    <InlineField field="name" value={nameVal} />
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
                     <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{lead.source ?? "website"}</span>
                     <button
@@ -802,8 +916,8 @@ function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; 
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-3 items-center">
-                    {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-gray-500 hover:text-purple-600"><Mail className="w-3 h-3" />{lead.email}</a>}
-                    {lead.phone && <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-gray-500 hover:text-purple-600"><Phone className="w-3 h-3" />{lead.phone}</a>}
+                    <InlineField field="email" value={emailVal} icon={Mail} />
+                    <InlineField field="phone" value={phoneVal} icon={Phone} />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <select value={status} onChange={e => updateLeadStatus(lead.id, e.target.value)}

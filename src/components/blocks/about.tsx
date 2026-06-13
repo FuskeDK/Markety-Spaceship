@@ -86,34 +86,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team section - simple 2-col: text left, image right */}
-      <section className="container max-w-5xl mt-20 md:mt-28">
-        <div className="grid gap-10 md:grid-cols-2 md:items-center md:gap-16">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">The team</h2>
-            <div className="text-muted-foreground mt-6 space-y-4 text-lg leading-relaxed">
-              <p>
-                We started Markety to solve a problem we kept seeing: companies spending money on ads without a reliable, repeatable way to turn clicks into qualified conversations.
-              </p>
-              <p>
-                We are a small, focused team based in Denmark. We keep things lean so we can move fast and stay close to our clients. Every campaign we run is built and managed by people who care about results, not just delivery.
-              </p>
-              <p>
-                If you want to work with a team that treats your pipeline like it's our own, get in touch.
-              </p>
-            </div>
-            <div className="mt-8">
-              <Link href="/contact">
-                <Button size="lg">Get in touch</Button>
-              </Link>
-            </div>
-          </div>
-          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/5" }}>
-            <Image src="/about/4.webp" alt="Our team" fill className="object-cover" />
-          </div>
-        </div>
-      </section>
-
       <section className="container mt-24 max-w-5xl lg:mt-32">
         <div className="mb-12 max-w-2xl">
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-purple-600 dark:text-purple-400">
