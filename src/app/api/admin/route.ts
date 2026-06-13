@@ -172,31 +172,40 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true });
     }
 
-    // ── Company finder (no auth required - searches UK companies via Nimble + Claude) ──────────────
+    // ── Company finder (DuckDuckGo HTML search + Claude) ──────────────────────
     if (req.method === "GET" && action === "find-companies") {
       const q = searchParams.get("q") ?? "";
       if (!q) return NextResponse.json({ result: null });
 
-      const nimbleKey = process.env.NIMBLE_API_KEY;
-      if (!nimbleKey) {
-        console.error("find-companies: NIMBLE_API_KEY not set");
-        return NextResponse.json({ result: null });
-      }
-
       try {
-        const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " contact")}&gl=gb&hl=en&num=10`;
-        const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
-          },
-          body: JSON.stringify({ url: searchUrl, render: false, format: "markdown", country: "GB" }),
-        });
-        const nimbleData = await nimbleRes.json();
-        const searchText = ((nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? nimbleData?.markdown ?? "") as string).slice(0, 6000);
-        if (!searchText) {
-          console.error("find-companies: Nimble returned no content", JSON.stringify(nimbleData).slice(0, 300));
+        // DuckDuckGo HTML search — no API key needed
+        const ddgRes = await fetch(
+          `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q + " contact email")}&kl=uk-en`,
+          {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "en-GB,en;q=0.9",
+            },
+          }
+        );
+        if (!ddgRes.ok) {
+          console.error("find-companies: DDG returned status", ddgRes.status);
+          return NextResponse.json({ result: null });
+        }
+        const html = await ddgRes.text();
+        const searchText = html
+          .replace(/<script[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 6000);
+
+        if (!searchText || searchText.length < 50) {
+          console.error("find-companies: DDG returned no useful content");
           return NextResponse.json({ result: null });
         }
 
@@ -207,7 +216,7 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
           max_tokens: 400,
           messages: [{
             role: "user",
-            content: `From these Google search results, extract the FIRST local business in the UK, US, Australia, or Canada. Skip large national chains, franchises, and obvious corporations — prefer owner-operated or small local businesses. Only extract businesses from English-speaking countries. If everything shown is from a non-English-speaking country, return {"result":null}.
+            content: `From these search results, extract the FIRST local business in the UK, US, Australia, or Canada. Skip large national chains, franchises, and obvious corporations — prefer owner-operated or small local businesses. Only extract businesses from English-speaking countries. If nothing fits, return {"result":null}.
 
 Return ONLY valid JSON — no explanation, no markdown fences:
 {
@@ -244,24 +253,20 @@ ${searchText}`,
         const nameVal = ((parsed.name as string) ?? "").toLowerCase();
         if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return NextResponse.json({ result: null });
 
-        // If no email found, try scraping homepage → /contact → /contact-us
+        // If no email found, try fetching homepage → /contact → /contact-us directly
         if (parsed.homepage && !parsed.email) {
           const base = (parsed.homepage as string).replace(/\/$/, "");
           for (const pageUrl of [base, `${base}/contact`, `${base}/contact-us`]) {
             try {
-              const pageRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
-                },
-                body: JSON.stringify({ url: pageUrl, render: false, format: "markdown", country: "GB" }),
+              const pageRes = await fetch(pageUrl, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" },
+                signal: AbortSignal.timeout(5000),
               });
-              const pageData = await pageRes.json();
-              const pageText = (pageData?.parsing?.markdown ?? pageData?.data?.markdown ?? pageData?.markdown ?? "") as string;
+              if (!pageRes.ok) continue;
+              const pageText = await pageRes.text();
               const emailMatch = pageText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
               if (emailMatch) { parsed.email = emailMatch[0]; break; }
-            } catch { /* try next page */ }
+            } catch { /* try next */ }
           }
         }
 
