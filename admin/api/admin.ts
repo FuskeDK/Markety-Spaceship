@@ -898,6 +898,25 @@ ${searchText}`,
     return res.status(200).json({ success: true });
   }
 
+  // ── Add lead manually ─────────────────────────────────────────────────────
+  if (req.method === "POST" && action === "add-lead-manual") {
+    const { clientId, name, email, phone, source, message, price } = req.body ?? {};
+    if (!clientId || !name) return res.status(400).json({ error: "clientId and name required" });
+    const { data: client } = await supabase.from("clients").select("price_per_lead").eq("id", clientId).single();
+    const { data: lead, error } = await supabase.from("leads").insert({
+      client_id: clientId,
+      name,
+      email: email || null,
+      phone: phone || null,
+      source: source || "manual",
+      message: message || null,
+      price: price != null && price !== "" ? Number(price) : (client?.price_per_lead ?? 0),
+      lead_status: "new",
+    }).select().single();
+    if (error) return res.status(500).json({ error: "Failed to add lead" });
+    return res.status(200).json({ lead });
+  }
+
   // ── Toggle invoice paid ───────────────────────────────────────────────────
   if (req.method === "POST" && action === "toggle-invoice-paid") {
     const { clientId, paid } = req.body ?? {};

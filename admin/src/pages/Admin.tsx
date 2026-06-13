@@ -27,7 +27,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, Clock, Mail, Phone,
   Lock, Eye, EyeOff, LogOut, DollarSign, TrendingUp, Users, BarChart2,
   Copy, Check, Search, X, ExternalLink, Zap, UserPlus, List,
-  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine,
+  ArrowUp, ArrowDown, Pencil, Save, Trash2, AlertTriangle, RotateCcw, Inbox, RefreshCw, PenLine, Plus,
 } from "lucide-react";
 
 type Lead = {
@@ -1291,6 +1291,41 @@ function ClientCard({ client, expanded, onToggle, onInvoice, adminPw, onInvoiceS
   const [editingLeadNoteId, setEditingLeadNoteId] = useState<string | null>(null);
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
 
+  // Add lead manually
+  const [showAddLeadForm, setShowAddLeadForm] = useState(false);
+  const [addLeadLoading, setAddLeadLoading] = useState(false);
+  const [addLeadError, setAddLeadError] = useState<string | null>(null);
+  const [addLeadName, setAddLeadName] = useState("");
+  const [addLeadEmail, setAddLeadEmail] = useState("");
+  const [addLeadPhone, setAddLeadPhone] = useState("");
+  const [addLeadSource, setAddLeadSource] = useState("manual");
+  const [addLeadPrice, setAddLeadPrice] = useState("");
+
+  const handleAddLead = async () => {
+    if (!addLeadName.trim()) { setAddLeadError("Name is required"); return; }
+    setAddLeadLoading(true);
+    setAddLeadError(null);
+    const r = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": adminPw },
+      body: JSON.stringify({
+        action: "add-lead-manual",
+        clientId: client.id,
+        name: addLeadName.trim(),
+        email: addLeadEmail.trim() || null,
+        phone: addLeadPhone.trim() || null,
+        source: addLeadSource || "manual",
+        price: addLeadPrice || undefined,
+      }),
+    });
+    setAddLeadLoading(false);
+    if (!r.ok) { setAddLeadError("Failed to add lead"); return; }
+    const { lead } = await r.json();
+    onClientUpdated({ id: client.id, leads: [...client.leads, lead], leads_this_month: client.leads_this_month + 1 });
+    setShowAddLeadForm(false);
+    setAddLeadName(""); setAddLeadEmail(""); setAddLeadPhone(""); setAddLeadSource("manual"); setAddLeadPrice("");
+  };
+
   const ONBOARDING = [
     { key: "ads" as const, label: "Set up Facebook / Google Ads" },
     { key: "landing_page" as const, label: "Build landing page" },
@@ -1735,64 +1770,125 @@ function ClientCard({ client, expanded, onToggle, onInvoice, adminPw, onInvoiceS
             )}
           </div>
 
-          {client.leads.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">No leads yet.</p>
-          ) : (
-            <div className="rounded-lg border border-gray-100 overflow-hidden">
-              <div className="divide-y divide-gray-50">
-                {client.leads.map(lead => {
-                  const status = leadStatuses[lead.id] ?? lead.lead_status ?? "new";
-                  const isEditingNote = editingLeadNoteId === lead.id;
-                  return (
-                    <div key={lead.id} className="px-4 py-3 space-y-2 group hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-xs font-medium text-gray-800">{lead.name ?? "-"}</p>
-                            <span className="text-xs text-gray-400">{fmt(lead.created_at)}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
-                          </div>
-                          {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-purple-600 truncate"><Mail className="w-3 h-3 shrink-0" />{lead.email}</a>}
-                          {lead.phone && <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-gray-400"><Phone className="w-3 h-3 shrink-0" />{lead.phone}</a>}
-                        </div>
-                        <button disabled={deletingLeadId === lead.id}
-                          onClick={async () => {
-                            setDeletingLeadId(lead.id);
-                            const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": adminPw }, body: JSON.stringify({ action: "delete-lead", leadId: lead.id }) });
-                            setDeletingLeadId(null);
-                            if (r.ok) onClientUpdated({ id: client.id, leads: client.leads.filter(l => l.id !== lead.id) });
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-400 shrink-0 disabled:opacity-30">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <select value={status} onChange={e => updateLeadStatus(lead.id, e.target.value)}
-                          className="h-6 px-1.5 text-xs rounded border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-300">
-                          {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                        </select>
-                        {!isEditingNote ? (
-                          <button onClick={() => { setEditingLeadNoteId(lead.id); setLeadNotesDraft(p => ({ ...p, [lead.id]: lead.lead_notes ?? "" })); }}
-                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 hover:bg-white transition-colors">
-                            <Pencil className="w-2.5 h-2.5" />{lead.lead_notes ? "Edit note" : "Add note"}
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <input value={leadNotesDraft[lead.id] ?? ""} onChange={e => setLeadNotesDraft(p => ({ ...p, [lead.id]: e.target.value }))}
-                              autoFocus placeholder="Add a note…"
-                              className="h-6 px-2 text-xs rounded border border-gray-200 w-40 focus:outline-none focus:ring-1 focus:ring-purple-300" />
-                            <button onClick={() => saveLeadNote(lead.id)} className="text-xs text-white px-2 py-0.5 rounded font-medium" style={{ background: "hsl(252 89% 58%)" }}>Save</button>
-                            <button onClick={() => setEditingLeadNoteId(null)} className="text-xs text-gray-400">×</button>
-                          </div>
-                        )}
-                        {lead.lead_notes && !isEditingNote && <span className="text-xs text-gray-400 italic truncate max-w-xs">{lead.lead_notes}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                Leads <span className="font-normal text-gray-400 normal-case tracking-normal">({client.leads.length})</span>
+              </p>
+              <button
+                onClick={() => { setShowAddLeadForm(v => !v); setAddLeadError(null); }}
+                className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors">
+                <Plus className="w-3.5 h-3.5" /> Add lead
+              </button>
             </div>
-          )}
+
+            {showAddLeadForm && (
+              <div className="mb-3 rounded-xl border border-purple-100 bg-purple-50/50 p-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-700">Add lead manually</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Name *</label>
+                    <input value={addLeadName} onChange={e => setAddLeadName(e.target.value)}
+                      placeholder="John Smith"
+                      className="w-full h-8 px-2.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Email</label>
+                    <input value={addLeadEmail} onChange={e => setAddLeadEmail(e.target.value)}
+                      placeholder="john@example.com" type="email"
+                      className="w-full h-8 px-2.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Phone</label>
+                    <input value={addLeadPhone} onChange={e => setAddLeadPhone(e.target.value)}
+                      placeholder="+44 7700 900000"
+                      className="w-full h-8 px-2.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Source</label>
+                    <input value={addLeadSource} onChange={e => setAddLeadSource(e.target.value)}
+                      placeholder="manual"
+                      className="w-full h-8 px-2.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Price (leave blank for default)</label>
+                    <input value={addLeadPrice} onChange={e => setAddLeadPrice(e.target.value)}
+                      placeholder={String(client.price_per_lead)} type="number" min="0"
+                      className="w-full h-8 px-2.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white" />
+                  </div>
+                </div>
+                {addLeadError && <p className="text-xs text-red-500">{addLeadError}</p>}
+                <div className="flex items-center gap-2">
+                  <button onClick={handleAddLead} disabled={addLeadLoading}
+                    className="flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-white rounded-lg disabled:opacity-60 transition-opacity hover:opacity-90"
+                    style={{ background: "hsl(252 89% 58%)" }}>
+                    <Plus className="w-3.5 h-3.5" />{addLeadLoading ? "Adding…" : "Add lead"}
+                  </button>
+                  <button onClick={() => { setShowAddLeadForm(false); setAddLeadError(null); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {client.leads.length === 0 && !showAddLeadForm ? (
+              <p className="text-sm text-gray-400 py-4 text-center">No leads yet.</p>
+            ) : client.leads.length > 0 ? (
+              <div className="rounded-lg border border-gray-100 overflow-hidden">
+                <div className="divide-y divide-gray-50">
+                  {client.leads.map(lead => {
+                    const status = leadStatuses[lead.id] ?? lead.lead_status ?? "new";
+                    const isEditingNote = editingLeadNoteId === lead.id;
+                    return (
+                      <div key={lead.id} className="px-4 py-3 space-y-2 group hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-xs font-medium text-gray-800">{lead.name ?? "-"}</p>
+                              <span className="text-xs text-gray-400">{fmt(lead.created_at)}</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[status]}`}>{LEAD_STATUS_LABELS[status]}</span>
+                            </div>
+                            {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-purple-600 truncate"><Mail className="w-3 h-3 shrink-0" />{lead.email}</a>}
+                            {lead.phone && <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-gray-400"><Phone className="w-3 h-3 shrink-0" />{lead.phone}</a>}
+                          </div>
+                          <button disabled={deletingLeadId === lead.id}
+                            onClick={async () => {
+                              setDeletingLeadId(lead.id);
+                              const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": adminPw }, body: JSON.stringify({ action: "delete-lead", leadId: lead.id }) });
+                              setDeletingLeadId(null);
+                              if (r.ok) onClientUpdated({ id: client.id, leads: client.leads.filter(l => l.id !== lead.id) });
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-400 shrink-0 disabled:opacity-30">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select value={status} onChange={e => updateLeadStatus(lead.id, e.target.value)}
+                            className="h-6 px-1.5 text-xs rounded border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-300">
+                            {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          </select>
+                          {!isEditingNote ? (
+                            <button onClick={() => { setEditingLeadNoteId(lead.id); setLeadNotesDraft(p => ({ ...p, [lead.id]: lead.lead_notes ?? "" })); }}
+                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 hover:bg-white transition-colors">
+                              <Pencil className="w-2.5 h-2.5" />{lead.lead_notes ? "Edit note" : "Add note"}
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <input value={leadNotesDraft[lead.id] ?? ""} onChange={e => setLeadNotesDraft(p => ({ ...p, [lead.id]: e.target.value }))}
+                                autoFocus placeholder="Add a note…"
+                                className="h-6 px-2 text-xs rounded border border-gray-200 w-40 focus:outline-none focus:ring-1 focus:ring-purple-300" />
+                              <button onClick={() => saveLeadNote(lead.id)} className="text-xs text-white px-2 py-0.5 rounded font-medium" style={{ background: "hsl(252 89% 58%)" }}>Save</button>
+                              <button onClick={() => setEditingLeadNoteId(null)} className="text-xs text-gray-400">×</button>
+                            </div>
+                          )}
+                          {lead.lead_notes && !isEditingNote && <span className="text-xs text-gray-400 italic truncate max-w-xs">{lead.lead_notes}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>
