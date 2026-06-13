@@ -10,7 +10,7 @@ export interface ActionResponse<T = unknown> {
 }
 export const formSchema = z.object({
   name: z.string({ message: "This field is required" }),
-  email: z.string({ message: "This field is required" }),
+  email: z.string({ message: "This field is required" }).email({ message: "Invalid email address" }),
   company: z.string({ message: "This field is required" }),
   employees: z.string({ message: "This field is required" }).min(1, "Please select an item"),
   message: z.string({ message: "This field is required" }),

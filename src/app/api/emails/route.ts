@@ -8,8 +8,20 @@
 // Used by: src/app/admin/page.tsx (Emails tab).
 import { NextRequest, NextResponse } from "next/server";
 
+import { timingSafeEqual } from "crypto";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+
+function isAuthed(req: NextRequest): boolean {
+  const pw = req.headers.get("x-admin-password");
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!pw || !expected) return false;
+  try {
+    return timingSafeEqual(Buffer.from(pw), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 
 function makeClient() {
@@ -23,8 +35,7 @@ function makeClient() {
 }
 
 export async function GET(req: NextRequest) {
-  const pw = req.headers.get("x-admin-password");
-  if (!pw || pw !== process.env.ADMIN_PASSWORD) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAuthed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!process.env.SPACEMAIL_PASSWORD) return NextResponse.json({ error: "Mail not configured" }, { status: 500 });
 
   const uid = new URL(req.url).searchParams.get("uid");
@@ -90,8 +101,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const pw = req.headers.get("x-admin-password");
-  if (!pw || pw !== process.env.ADMIN_PASSWORD) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAuthed(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!process.env.SPACEMAIL_PASSWORD) return NextResponse.json({ error: "Mail not configured" }, { status: 500 });
 
   const { uid, all } = await req.json().catch(() => ({}));

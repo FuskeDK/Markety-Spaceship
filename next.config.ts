@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
+    // package.json lists next@9 locally but the project targets Next.js 14+;
+    // Vercel installs the correct version at build time.
     ignoreBuildErrors: true,
   },
 };

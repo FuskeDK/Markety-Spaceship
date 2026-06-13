@@ -8,10 +8,11 @@
 //   - "cron-*"        - authenticated by CRON_SECRET Bearer token (Vercel cron)
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "crypto";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { ImapFlow } from "imapflow";
 import { createClickUpTask } from "@/lib/server/_clickup";
 import { sendEmail } from "@/lib/server/_mailer";
+import { loginRatelimit } from "@/lib/server/_ratelimit";
 
 async function appendToSent({ to, subject, html, messageId }: { to: string; subject: string; html: string; messageId?: string }) {
   const client = new ImapFlow({
@@ -47,24 +48,15 @@ function money(n: number, currency: string) {
 
 function isAuthed(req: NextRequest): boolean {
   const pw = req.headers.get("x-admin-password");
-  return !!pw && pw === process.env.ADMIN_PASSWORD;
-}
-
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_MAX = 5;
-const RATE_WINDOW_MS = 15 * 60 * 1000;
-
-function checkLoginRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = loginAttempts.get(ip);
-  if (!record || now >= record.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!pw || !expected) return false;
+  try {
+    return timingSafeEqual(Buffer.from(pw), Buffer.from(expected));
+  } catch {
+    return false;
   }
-  if (record.count >= RATE_MAX) return false;
-  record.count++;
-  return true;
 }
+
 
 async function handleRequest(req: NextRequest): Promise<NextResponse> {
   try {
@@ -164,13 +156,17 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
     // ── Login (no auth required) ──────────────────────────────────────────────
     if (req.method === "POST" && action === "login") {
       const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-      if (!checkLoginRateLimit(ip)) {
+      const { success: loginAllowed } = await loginRatelimit.limit(`admin:${ip}`);
+      if (!loginAllowed) {
         return NextResponse.json({ error: "Too many login attempts. Try again in 15 minutes." }, { status: 429 });
       }
       const { password } = body;
       const adminPassword = process.env.ADMIN_PASSWORD?.trim();
       if (!adminPassword) return NextResponse.json({ error: "Admin not configured" }, { status: 500 });
-      if (((password as string) ?? "").trim() !== adminPassword) {
+      const pwStr = ((password as string) ?? "").trim();
+      let pwMatch = false;
+      try { pwMatch = pwStr.length === adminPassword.length && timingSafeEqual(Buffer.from(pwStr), Buffer.from(adminPassword)); } catch { /* length mismatch */ }
+      if (!pwMatch) {
         return NextResponse.json({ error: "Wrong password" }, { status: 401 });
       }
       return NextResponse.json({ success: true });
@@ -1264,7 +1260,7 @@ Write a short, personal cold email in ${langName}. Rules:
         html: `<pre style="font-family:monospace;font-size:12px;padding:16px;">${String(err)}</pre>`,
       }).catch(() => {});
     }
-    return NextResponse.json({ error: "Internal server error", details: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

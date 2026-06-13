@@ -3,6 +3,7 @@
 //   POST { to, contactName, replyMessage, recordId } → sends a Danish reply email
 //        and marks the Airtable record as "besvaret" (answered)
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 
 import { sendEmail } from "@/lib/server/_mailer";
 
@@ -21,14 +22,28 @@ const F = {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, x-admin-password",
 };
+
+function isAuthed(req: NextRequest): boolean {
+  const pw = req.headers.get("x-admin-password");
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!pw || !expected) return false;
+  try {
+    return timingSafeEqual(Buffer.from(pw), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isAuthed(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+  }
   const key = process.env.AIRTABLE_API_KEY;
   if (!key) return NextResponse.json({ error: "AIRTABLE_API_KEY not set" }, { status: 500, headers: corsHeaders });
 
@@ -64,6 +79,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAuthed(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { to, contactName, replyMessage, recordId } = body;
 

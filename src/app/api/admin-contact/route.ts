@@ -7,6 +7,11 @@
 // No auth required - this is a public-facing form.
 // NOTE: Named admin-contact to avoid conflict with existing /contact page route.
 import { NextRequest, NextResponse } from "next/server";
+import { submitRatelimit } from "@/lib/server/_ratelimit";
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -14,6 +19,12 @@ import { upsertContact } from "@/lib/server/_hubspot";
 import { sendEmail } from "@/lib/server/_mailer";
 
 export async function POST(req: NextRequest) {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const { success } = await submitRatelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const {
     name, email, company, cvr, companyDescription, goals, message,
@@ -21,6 +32,10 @@ export async function POST(req: NextRequest) {
 
   if (!name || !email || !companyDescription || !goals) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  if (!isValidEmail(email as string)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
   // Save to Supabase

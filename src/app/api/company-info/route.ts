@@ -11,8 +11,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import { sendEmail } from "@/lib/server/_mailer";
+import { generalRatelimit } from "@/lib/server/_ratelimit";
 
 export async function POST(req: NextRequest) {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const { success } = await generalRatelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const {
     token, name, email, company, message, currentDate,

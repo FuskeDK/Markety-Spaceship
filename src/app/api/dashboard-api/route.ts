@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, pbkdf2Sync } from "crypto";
 import { sendEmail } from "@/lib/server/_mailer";
+import { loginRatelimit, submitRatelimit } from "@/lib/server/_ratelimit";
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -16,21 +17,6 @@ function verifyPassword(password: string, stored: string): boolean {
   return derived === hash;
 }
 
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_MAX = 8;
-const RATE_WINDOW_MS = 15 * 60 * 1000;
-
-function checkLoginRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = loginAttempts.get(ip);
-  if (!record || now >= record.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (record.count >= RATE_MAX) return false;
-  record.count++;
-  return true;
-}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -83,6 +69,10 @@ export async function POST(req: NextRequest) {
   const action = body?.action as string | undefined;
 
   if (action === "create-order") {
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    const { success: orderAllowed } = await submitRatelimit.limit(`order:${ip}`);
+    if (!orderAllowed) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429, headers: CORS });
+
     const { token, customerName, customerEmail, customerPhone, customerAddress, items, total } = body ?? {};
     if (!token) return NextResponse.json({ error: "token required" }, { status: 400, headers: CORS });
     const { data: client } = await supabase.from("clients").select("id, email, company, price_per_lead, lead_cap").eq("token", token).single();
@@ -187,7 +177,11 @@ export async function POST(req: NextRequest) {
   if (!password) return NextResponse.json({ error: "Missing fields" }, { status: 400, headers: CORS });
 
   if (action === "claim") {
-    if ((password as string).length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400, headers: CORS });
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    const { success: claimAllowed } = await loginRatelimit.limit(`claim:${ip}`);
+    if (!claimAllowed) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429, headers: CORS });
+
+    if ((password as string).length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400, headers: CORS });
     const { data: client } = await supabase.from("clients").select("id, claimed").eq("token", token).single();
     if (!client) return NextResponse.json({ error: "Dashboard not found" }, { status: 404, headers: CORS });
     if (client.claimed) return NextResponse.json({ error: "Already claimed" }, { status: 400, headers: CORS });
@@ -197,7 +191,8 @@ export async function POST(req: NextRequest) {
 
   if (action === "login") {
     const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-    if (!checkLoginRateLimit(ip)) return NextResponse.json({ error: "Too many login attempts. Try again in 15 minutes." }, { status: 429, headers: CORS });
+    const { success: loginAllowed } = await loginRatelimit.limit(`dashboard:${ip}`);
+    if (!loginAllowed) return NextResponse.json({ error: "Too many login attempts. Try again in 15 minutes." }, { status: 429, headers: CORS });
     const { data: client } = await supabase.from("clients").select("id, claimed, password_hash").eq("token", token).single();
     if (!client) return NextResponse.json({ error: "Dashboard not found" }, { status: 404, headers: CORS });
     if (!client.claimed || !client.password_hash) return NextResponse.json({ error: "Dashboard not claimed yet" }, { status: 400, headers: CORS });
@@ -226,6 +221,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "change-password") {
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    const { success: changeAllowed } = await loginRatelimit.limit(`changepw:${ip}`);
+    if (!changeAllowed) return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429, headers: CORS });
+
     const { currentPassword, newPassword } = body ?? {};
     if (!currentPassword || !newPassword) return NextResponse.json({ error: "Missing fields" }, { status: 400, headers: CORS });
     if ((newPassword as string).length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400, headers: CORS });

@@ -139,7 +139,7 @@ export default function Admin() {
   const [showPw, setShowPw] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [authedPw, setAuthedPw] = useState<string | null>(() => localStorage.getItem(ADMIN_KEY));
+  const [authedPw, setAuthedPw] = useState<string | null>(() => sessionStorage.getItem(ADMIN_KEY));
 
   const [tab, setTab] = useState<"overview" | "clients" | "all-leads" | "outreach" | "emails" | "content" | "contacts" | "invoice-queue">("overview");
   const [globalSearch, setGlobalSearch] = useState("");
@@ -155,7 +155,7 @@ export default function Admin() {
       fetch("/api/admin?action=clients", { headers: { "x-admin-password": pw } }),
       fetch("/api/admin?action=stats", { headers: { "x-admin-password": pw } }),
     ]);
-    if (clientsRes.status === 401) { localStorage.removeItem(ADMIN_KEY); setAuthedPw(null); if (!silent) setDataLoading(false); return; }
+    if (clientsRes.status === 401) { sessionStorage.removeItem(ADMIN_KEY); setAuthedPw(null); if (!silent) setDataLoading(false); return; }
     const [clientsData, statsData] = await Promise.all([clientsRes.json(), statsRes.json()]);
     setClients(clientsData.clients ?? []);
     setStats(statsData);
@@ -200,7 +200,7 @@ export default function Admin() {
       setLoginError(errBody.error ?? "Wrong password.");
       return;
     }
-    localStorage.setItem(ADMIN_KEY, password);
+    sessionStorage.setItem(ADMIN_KEY, password);
     setAuthedPw(password);
   };
 
@@ -214,7 +214,7 @@ export default function Admin() {
       ? { ...c, last_invoiced_at: invoiced ? new Date().toISOString() : null } : c));
   };
 
-  const logout = () => { localStorage.removeItem(ADMIN_KEY); setAuthedPw(null); };
+  const logout = () => { sessionStorage.removeItem(ADMIN_KEY); setAuthedPw(null); };
 
   const todayStr = new Date().toDateString();
   const leadsToday = clients.reduce((acc, c) =>

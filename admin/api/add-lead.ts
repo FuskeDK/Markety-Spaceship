@@ -46,8 +46,15 @@ function money(n: number, currency: string) {
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function leadNotificationEmailToClient(lead: { name: string | null; email: string | null; phone: string | null; source: string | null }, client: { name: string; company: string; currency: string; token: string }, dashboardUrl: string): string {
-  const leadName = lead.name ?? "New lead";
+  const leadName = lead.name ? escapeHtml(lead.name) : "New lead";
+  const safePhone = lead.phone ? escapeHtml(lead.phone) : null;
+  const safeEmail = lead.email ? escapeHtml(lead.email) : null;
+  const safeSource = lead.source ? escapeHtml(lead.source) : null;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -65,10 +72,10 @@ function leadNotificationEmailToClient(lead: { name: string | null; email: strin
       <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.5;">A new lead just came in for ${client.company}. Contact them as soon as possible - leads go cold fast.</p>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 26px;">
       <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-        ${lead.name ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;width:80px;">Name</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;">${lead.name}</td></tr>` : ""}
-        ${lead.phone ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Phone</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;"><a href="tel:${lead.phone}" style="color:#5B21F4;text-decoration:none;">${lead.phone}</a></td></tr>` : ""}
-        ${lead.email ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Email</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;"><a href="mailto:${lead.email}" style="color:#5B21F4;text-decoration:none;">${lead.email}</a></td></tr>` : ""}
-        ${lead.source ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Source</td><td style="padding:6px 0;font-size:14px;color:#374151;">${lead.source}</td></tr>` : ""}
+        ${leadName !== "New lead" ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;width:80px;">Name</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;">${leadName}</td></tr>` : ""}
+        ${safePhone ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Phone</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;"><a href="tel:${safePhone}" style="color:#5B21F4;text-decoration:none;">${safePhone}</a></td></tr>` : ""}
+        ${safeEmail ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Email</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#0f172a;"><a href="mailto:${safeEmail}" style="color:#5B21F4;text-decoration:none;">${safeEmail}</a></td></tr>` : ""}
+        ${safeSource ? `<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Source</td><td style="padding:6px 0;font-size:14px;color:#374151;">${safeSource}</td></tr>` : ""}
       </table>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:26px 0;">
       <table cellpadding="0" cellspacing="0" border="0">
@@ -90,6 +97,10 @@ function leadNotificationEmailToClient(lead: { name: string | null; email: strin
 }
 
 function leadNotificationEmailToAdmin(lead: { name: string | null; email: string | null; phone: string | null; source: string | null }, client: { company: string; currency: string; price_per_lead: number }, leadsThisMonth: number): string {
+  const safeName = lead.name ? escapeHtml(lead.name) : null;
+  const safePhone = lead.phone ? escapeHtml(lead.phone) : null;
+  const safeEmail = lead.email ? escapeHtml(lead.email) : null;
+  const safeSource = lead.source ? escapeHtml(lead.source) : null;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"></head>
@@ -98,10 +109,10 @@ function leadNotificationEmailToAdmin(lead: { name: string | null; email: string
   <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">New lead</p>
   <h2 style="margin:0 0 20px;font-size:20px;font-weight:800;color:#111827;">${client.company}</h2>
   <table style="width:100%;font-size:14px;">
-    ${lead.name ? `<tr><td style="color:#6b7280;padding:4px 0;">Name</td><td style="font-weight:600;color:#111827;">${lead.name}</td></tr>` : ""}
-    ${lead.phone ? `<tr><td style="color:#6b7280;padding:4px 0;">Phone</td><td style="font-weight:600;color:#111827;">${lead.phone}</td></tr>` : ""}
-    ${lead.email ? `<tr><td style="color:#6b7280;padding:4px 0;">Email</td><td style="font-weight:600;color:#111827;">${lead.email}</td></tr>` : ""}
-    ${lead.source ? `<tr><td style="color:#6b7280;padding:4px 0;">Source</td><td style="color:#374151;">${lead.source}</td></tr>` : ""}
+    ${safeName ? `<tr><td style="color:#6b7280;padding:4px 0;">Name</td><td style="font-weight:600;color:#111827;">${safeName}</td></tr>` : ""}
+    ${safePhone ? `<tr><td style="color:#6b7280;padding:4px 0;">Phone</td><td style="font-weight:600;color:#111827;">${safePhone}</td></tr>` : ""}
+    ${safeEmail ? `<tr><td style="color:#6b7280;padding:4px 0;">Email</td><td style="font-weight:600;color:#111827;">${safeEmail}</td></tr>` : ""}
+    ${safeSource ? `<tr><td style="color:#6b7280;padding:4px 0;">Source</td><td style="color:#374151;">${safeSource}</td></tr>` : ""}
     <tr><td style="color:#6b7280;padding:4px 0;">Price</td><td style="font-weight:600;color:#111827;">${money(client.price_per_lead, client.currency)}</td></tr>
     <tr><td style="color:#6b7280;padding:4px 0;">Leads this month</td><td style="font-weight:600;color:#111827;">${leadsThisMonth}</td></tr>
   </table>

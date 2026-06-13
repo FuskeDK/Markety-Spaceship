@@ -15,23 +15,8 @@ import { createClient } from "@supabase/supabase-js";
 
 import { createClickUpTask, LIST_IDS } from "@/lib/server/_clickup";
 import { sendEmail } from "@/lib/server/_mailer";
+import { submitRatelimit } from "@/lib/server/_ratelimit";
 
-// Rate limiting - max 5 submissions per IP per 10 minutes
-const submitAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_MAX = 5;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = submitAttempts.get(ip);
-  if (!record || now >= record.resetAt) {
-    submitAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return true;
-  }
-  if (record.count >= RATE_MAX) return false;
-  record.count++;
-  return true;
-}
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-().+]/g, "");
@@ -157,7 +142,8 @@ export async function POST(req: NextRequest) {
 
   // Rate limiting
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  if (!checkRateLimit(ip)) {
+  const { success } = await submitRatelimit.limit(ip);
+  if (!success) {
     return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429, headers: corsHeaders });
   }
 

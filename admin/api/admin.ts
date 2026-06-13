@@ -62,6 +62,10 @@ function money(n: number, currency: string) {
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function isAuthed(req: VercelRequest): boolean {
   const pw = req.headers["x-admin-password"] as string;
   return !!pw && pw === process.env.ADMIN_PASSWORD;
@@ -161,9 +165,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const lead of staleLeads ?? []) {
         const client = (Array.isArray(lead.clients) ? lead.clients[0] : lead.clients) as { name: string; company: string; email: string; token: string; language: string } | null;
         if (!client?.email) continue;
-        const isDa = (client.language ?? "en") === "da"; const leadName = lead.name ?? lead.phone ?? lead.email ?? "a lead";
+        const isDa = (client.language ?? "en") === "da";
+        const leadName = escapeHtml(lead.name ?? lead.phone ?? lead.email ?? "a lead");
+        const safePhone = lead.phone ? escapeHtml(lead.phone) : null;
+        const safeEmail = lead.email ? escapeHtml(lead.email) : null;
         const dashUrl = `https://marketyleadgen.com/dashboard/${client.token}`;
-        const html = `<html><body style="font-family:sans-serif;padding:32px 16px;background:#fff8ed;"><img src="https://www.marketyleadgen.com/MarketySquare.png" width="48" style="border-radius:10px;margin-bottom:16px;"><h2 style="color:#0f172a;">${isDa ? "Husker du dette lead?" : "Did you follow up?"}</h2><p style="color:#374151;">${isDa ? `<strong>${leadName}</strong> udfyldte din formular for over 20 timer siden og er endnu ikke kontaktet.` : `<strong>${leadName}</strong> filled in your form over 20 hours ago and hasn't been contacted yet.`}</p>${lead.phone ? `<p><a href="tel:${lead.phone}" style="color:#5B21F4;font-weight:600;">${lead.phone}</a></p>` : ""}${lead.email ? `<p><a href="mailto:${lead.email}" style="color:#5B21F4;">${lead.email}</a></p>` : ""}<a href="${dashUrl}" style="display:inline-block;padding:12px 24px;background:#5B21F4;color:#fff;text-decoration:none;border-radius:50px;font-weight:700;">${isDa ? "Se i dashboard" : "View in dashboard"}</a></body></html>`;
+        const html = `<html><body style="font-family:sans-serif;padding:32px 16px;background:#fff8ed;"><img src="https://www.marketyleadgen.com/MarketySquare.png" width="48" style="border-radius:10px;margin-bottom:16px;"><h2 style="color:#0f172a;">${isDa ? "Husker du dette lead?" : "Did you follow up?"}</h2><p style="color:#374151;">${isDa ? `<strong>${leadName}</strong> udfyldte din formular for over 20 timer siden og er endnu ikke kontaktet.` : `<strong>${leadName}</strong> filled in your form over 20 hours ago and hasn't been contacted yet.`}</p>${safePhone ? `<p><a href="tel:${safePhone}" style="color:#5B21F4;font-weight:600;">${safePhone}</a></p>` : ""}${safeEmail ? `<p><a href="mailto:${safeEmail}" style="color:#5B21F4;">${safeEmail}</a></p>` : ""}<a href="${dashUrl}" style="display:inline-block;padding:12px 24px;background:#5B21F4;color:#fff;text-decoration:none;border-radius:50px;font-weight:700;">${isDa ? "Se i dashboard" : "View in dashboard"}</a></body></html>`;
         try { await sendEmail({ to: client.email, subject: isDa ? `Husker du ${leadName}?` : `Reminder: ${leadName} is still waiting`, html, replyTo: "info@marketyleadgen.com" }); sent++; } catch { /* continue */ }
       }
       return res.status(200).json({ sent });

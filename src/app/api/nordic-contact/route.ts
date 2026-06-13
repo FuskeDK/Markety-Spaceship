@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { addNordicContact } from "@/lib/server/_airtable";
 import { sendEmail } from "@/lib/server/_mailer";
+import { generalRatelimit } from "@/lib/server/_ratelimit";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,12 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const { success } = await generalRatelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429, headers: corsHeaders });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { name, phone, email, message } = body;
 

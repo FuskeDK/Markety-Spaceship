@@ -460,7 +460,7 @@ const no: SiteStrings = {
   },
 };
 
-export const translations: Record<Locale, SiteStrings> = { en, da, de, sv, no };
+export const translations: Partial<Record<Locale, SiteStrings>> & { en: SiteStrings } = { en, da, de, sv, no };
 
 export function getT(locale: string): SiteStrings {
   const l = LOCALE_MAP[locale] ?? "en";

@@ -5,10 +5,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@supabase/supabase-js";
+import { statsRatelimit } from "@/lib/server/_ratelimit";
 
 export async function GET(req: NextRequest) {
-  // suppress unused warning
-  void req;
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const { success } = await statsRatelimit.limit(ip);
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
   const headers = { "Access-Control-Allow-Origin": "*" };
 
   const supabase = createClient(
