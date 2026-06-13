@@ -182,86 +182,70 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
         console.error("find-companies: SERPER_API_KEY not set");
         return NextResponse.json({ result: null });
       }
-      if (!process.env.ANTHROPIC_API_KEY) {
-        console.error("find-companies: ANTHROPIC_API_KEY not set");
-        return NextResponse.json({ result: null });
-      }
-
       try {
         // Serper.dev — Google Search JSON API
         const serperRes = await fetch("https://google.serper.dev/search", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-API-KEY": serperKey,
-          },
+          headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
           body: JSON.stringify({ q: q + " contact email", gl: "gb", hl: "en", num: 10 }),
         });
         if (!serperRes.ok) {
-          console.error("find-companies: Serper returned status", serperRes.status, await serperRes.text());
+          console.error("find-companies: Serper status", serperRes.status, await serperRes.text());
           return NextResponse.json({ result: null });
         }
         const serperData = await serperRes.json() as {
-          organic?: Array<{ title: string; link: string; snippet?: string; sitelinks?: Array<{ title: string; link: string }> }>;
+          organic?: Array<{ title: string; link: string; snippet?: string }>;
         };
         const results = serperData.organic ?? [];
         if (results.length === 0) {
           console.error("find-companies: Serper returned no results");
           return NextResponse.json({ result: null });
         }
-        const searchText = results
-          .map(r => `Title: ${r.title}\nURL: ${r.link}\nSnippet: ${r.snippet ?? ""}`)
-          .join("\n---\n")
-          .slice(0, 6000);
 
-
-        const Anthropic = (await import("@anthropic-ai/sdk")).default;
-        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-        const msg = await anthropic.messages.create({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 400,
-          messages: [{
-            role: "user",
-            content: `From these search results, extract the FIRST local business in the UK, US, Australia, or Canada. Skip large national chains, franchises, and obvious corporations — prefer owner-operated or small local businesses. Only extract businesses from English-speaking countries. If nothing fits, return {"result":null}.
-
-Return ONLY valid JSON — no explanation, no markdown fences:
-{
-  "name": "Business Name",
-  "email": "info@example.com or null",
-  "phone": "+44 7700 000000 or null",
-  "homepage": "https://example.com or null",
-  "city": "London",
-  "address": "123 High Street, London",
-  "employees": "1-5 or null",
-  "industrydesc": "Plumbing services",
-  "owners": [{"name": "John Smith"}]
-}
-
-If no suitable business found, return exactly: {"result":null}
-
-Search results:
-${searchText}`,
-          }],
+        // Skip directories and aggregators — find the first real business site
+        const SKIP_DOMAINS = ["yelp.com", "yell.com", "checkatrade.com", "bark.com", "trustpilot.com",
+          "google.com", "facebook.com", "linkedin.com", "wikipedia.org", "yellowpages",
+          "cylex.co.uk", "freeindex.co.uk", "hotfrog.co.uk", "thomsonlocal.com"];
+        const business = results.find(r => {
+          try {
+            const host = new URL(r.link).hostname.toLowerCase();
+            return !SKIP_DOMAINS.some(d => host.includes(d));
+          } catch { return false; }
         });
-
-        const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-        let parsed: Record<string, unknown> | null = null;
-        try { parsed = JSON.parse(raw); } catch {
-          console.error("find-companies: Claude returned non-JSON:", raw.slice(0, 200));
+        if (!business) {
+          console.error("find-companies: no direct business site in results");
           return NextResponse.json({ result: null });
         }
-        if (!parsed || parsed.result === null || !parsed.name) return NextResponse.json({ result: null });
 
-        const emailVal = ((parsed.email as string | null) ?? "").toLowerCase();
+        // Company name: first meaningful segment of title (before dash/pipe)
+        const titleParts = business.title.split(/\s*[\|\-–—•·]\s*/);
+        let name = titleParts[0]?.trim() ?? business.title;
+        name = name.replace(/\s*(official site|home|website|homepage)\s*/gi, "").trim();
+        if (!name) return NextResponse.json({ result: null });
+
+        // Skip continental European company suffixes
+        if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(name.toLowerCase())) {
+          return NextResponse.json({ result: null });
+        }
+
+        const homepage = business.link;
+        const city = q.split(" ").slice(-1)[0] ?? "";
+
+        // Scan all snippets for email and phone
+        const allText = results.map(r => r.snippet ?? "").join(" ");
         const BLOCKED_TLDS = [".dk", ".de", ".se", ".no", ".fi", ".nl", ".pl", ".cz", ".hu", ".fr", ".it", ".es", ".pt", ".ru", ".cn", ".jp", ".be", ".at"];
-        if (emailVal && BLOCKED_TLDS.some(tld => emailVal.endsWith(tld))) return NextResponse.json({ result: null });
+        const emailRaw = allText.match(/[a-zA-Z0-9._%+-]+@(?!sentry|noreply|no-reply|example|wixpress|squarespace)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+        let email: string | null = emailRaw?.[0] ?? null;
+        if (email && BLOCKED_TLDS.some(tld => email!.toLowerCase().endsWith(tld))) email = null;
 
-        const nameVal = ((parsed.name as string) ?? "").toLowerCase();
-        if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return NextResponse.json({ result: null });
+        const phoneRaw = allText.match(/(?:\+44[\s\-]?|0)[\d\s\-\(\)]{9,14}/);
+        const phone = phoneRaw?.[0]?.replace(/\s+/g, " ").trim() ?? null;
 
-        // If no email found, try fetching homepage → /contact → /contact-us directly
-        if (parsed.homepage && !parsed.email) {
-          const base = (parsed.homepage as string).replace(/\/$/, "");
+        const industrydesc = business.snippet?.split(/[.!?]/)[0]?.trim() ?? null;
+
+        // If no email in snippets, scrape homepage → /contact → /contact-us
+        if (!email) {
+          const base = homepage.replace(/\/$/, "");
           for (const pageUrl of [base, `${base}/contact`, `${base}/contact-us`]) {
             try {
               const pageRes = await fetch(pageUrl, {
@@ -270,26 +254,14 @@ ${searchText}`,
               });
               if (!pageRes.ok) continue;
               const pageText = await pageRes.text();
-              const emailMatch = pageText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-              if (emailMatch) { parsed.email = emailMatch[0]; break; }
+              const m = pageText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+              if (m) { email = m[0]; break; }
             } catch { /* try next */ }
           }
         }
 
         return NextResponse.json({
-          result: {
-            name: parsed.name ?? "",
-            email: parsed.email ?? null,
-            phone: parsed.phone ?? null,
-            homepage: parsed.homepage ?? null,
-            city: parsed.city ?? "",
-            zipcode: "",
-            address: parsed.address ?? "",
-            industrydesc: parsed.industrydesc ?? null,
-            employees: (parsed.employees as string) ?? null,
-            owners: parsed.owners ?? null,
-            vat: null,
-          },
+          result: { name, email: email ?? null, phone: phone ?? null, homepage, city, zipcode: "", address: "", industrydesc, employees: null, owners: null, vat: null },
         });
       } catch (err) {
         console.error("find-companies error:", err instanceof Error ? err.message : String(err));
