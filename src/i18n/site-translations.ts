@@ -72,7 +72,7 @@ const en = {
     ],
   },
   faq: {
-    heading: "Common Questions",
+    heading: "Frequently Asked Questions",
     subheading: "If you can't find what you're looking for,",
     subheadingLink: "get in touch",
     categories: [

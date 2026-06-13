@@ -19,7 +19,7 @@ export const Hero = ({ t }: { t: SiteStrings }) => {
           <Button size="lg" asChild>
             <a href="/contact">{t.hero.ctaPrimary}</a>
           </Button>
-          <Button size="lg" variant="outline" className="from-background gap-2 bg-linear-to-r to-transparent shadow-md" asChild>
+          <Button size="lg" variant="outline" className="gap-2" asChild>
             <a href="/#resource-allocation">
               {t.hero.ctaSecondary}
               <ArrowRight className="size-4 stroke-3" />
@@ -28,20 +28,18 @@ export const Hero = ({ t }: { t: SiteStrings }) => {
         </div>
       </div>
 
-      <div className="container mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-14 lg:mt-16">
+      <div className="container mt-12 grid grid-cols-1 gap-7 sm:grid-cols-2 md:mt-16 lg:mt-20">
         {t.hero.features.map((feature, i) => {
           const Icon = ICONS[i];
           return (
-            <div
-              key={feature.title}
-              className="group flex items-start gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-purple-200 dark:hover:border-purple-800"
-            >
-              <div className="shrink-0 inline-flex size-10 items-center justify-center rounded-xl bg-purple-600 dark:bg-purple-700">
-                <Icon className="size-5 text-white" />
+            <div key={feature.title} className="group flex items-start gap-5 pl-5 relative">
+              <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-gradient-to-b from-purple-500 to-purple-500/0" />
+              <div className="shrink-0 inline-flex size-10 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 dark:bg-purple-400/10 dark:text-purple-400 ring-1 ring-purple-500/20">
+                <Icon className="size-5" />
               </div>
               <div>
-                <h2 className="font-text text-sm font-semibold text-foreground">{feature.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.description}</p>
+                <h2 className="font-semibold text-base text-foreground">{feature.title}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
               </div>
             </div>
           );
