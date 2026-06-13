@@ -100,7 +100,7 @@ const bottomItems = [
       "Know exactly what's performing, what each lead costs, and how your pipeline is growing.",
     images: [
       {
-        src: "/resource-allocation/notifications.webp",
+        src: "/resource-allocation/notifications.png",
         alt: "Campaign reporting",
         width: 305,
         height: 280,
