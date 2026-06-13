@@ -127,19 +127,23 @@ const About = () => {
           </p>
         </div>
 
-        <div className="grid gap-10 md:grid-cols-2">
-          {VALUES.map((value) => {
-            const Icon = value.icon;
-            return (
-              <div key={value.title} className="flex flex-col gap-3">
-                <div className="inline-flex size-11 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 dark:bg-purple-400/10 dark:text-purple-400 ring-1 ring-purple-500/20">
-                  <Icon className="size-5" />
+        <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2">
+            {VALUES.map((value) => {
+              const Icon = value.icon;
+              return (
+                <div key={value.title} className="bg-background flex flex-col gap-5 p-6 lg:p-8">
+                  <div className="inline-flex size-10 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 ring-1 ring-purple-500/20 dark:bg-purple-400/10 dark:text-purple-400">
+                    <Icon className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">{value.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{value.description}</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold">{value.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{value.description}</p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
 
