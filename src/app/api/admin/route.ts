@@ -459,7 +459,7 @@ ${searchText}`,
               quantity: 1,
             }],
             metadata: { client_id: client.id, month_key: monthKey },
-            success_url: `https://marketyleadgen.com/dashboard/${client.token}`,
+            success_url: `https://marketyleadgen.com/dashboard/${client.token}?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `https://marketyleadgen.com/dashboard/${client.token}`,
           });
           paymentUrl = session.url;
@@ -755,7 +755,7 @@ ${searchText}`,
             quantity: 1,
           }],
           metadata: { client_id: client.id, month_key: monthKey },
-          success_url: `https://marketyleadgen.com/dashboard/${client.token}`,
+          success_url: `https://marketyleadgen.com/dashboard/${client.token}?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `https://marketyleadgen.com/dashboard/${client.token}`,
         });
 

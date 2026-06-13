@@ -22,7 +22,7 @@
 // i18n: strings come from src/lib/translations.ts (English + Danish).
 // The client's `language` field in Supabase determines which strings to use.
 import { useEffect, useState, useRef, useCallback, type ComponentType } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
@@ -515,6 +515,7 @@ const SESSION_PREFIX = "markety_session_";
 
 const Dashboard = () => {
   const params = useParams(); const token = params?.token as string;
+  const searchParams = useSearchParams();
   const [client, setClient] = useState<Client | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -569,6 +570,26 @@ const Dashboard = () => {
     const id = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(id);
   }, [authenticated, fetchData]);
+
+  useEffect(() => {
+    const sessionId = searchParams?.get("session_id");
+    if (!sessionId || !token || !authenticated) return;
+    fetch("/api/dashboard-api", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "verify-stripe-payment", token, sessionId }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.paid) {
+          setInvoices(prev => prev.map(inv =>
+            inv.month_key === d.monthKey ? { ...inv, paid_at: new Date().toISOString() } : inv
+          ));
+          window.history.replaceState({}, "", `/dashboard/${token}`);
+        }
+      })
+      .catch(() => {});
+  }, [token, authenticated, searchParams]);
 
   useEffect(() => {
     if (!authenticated || !client?.company.toLowerCase().includes("nordic")) return;

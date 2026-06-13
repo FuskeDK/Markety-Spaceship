@@ -173,6 +173,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true }, { headers: CORS });
   }
 
+  if (action === "verify-stripe-payment") {
+    const { sessionId } = body ?? {};
+    if (!sessionId || !process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Missing config" }, { status: 400, headers: CORS });
+    const { data: client } = await supabase.from("clients").select("id").eq("token", token).single();
+    if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404, headers: CORS });
+    try {
+      const { default: Stripe } = await import("stripe");
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      const session = await stripe.checkout.sessions.retrieve(sessionId as string);
+      if (session.payment_status !== "paid") return NextResponse.json({ paid: false }, { headers: CORS });
+      const monthKey = session.metadata?.month_key;
+      if (!monthKey) return NextResponse.json({ paid: false }, { headers: CORS });
+      await supabase.from("invoices")
+        .update({ paid_at: new Date().toISOString() })
+        .eq("client_id", client.id)
+        .eq("month_key", monthKey)
+        .is("paid_at", null);
+      return NextResponse.json({ paid: true, monthKey }, { headers: CORS });
+    } catch {
+      return NextResponse.json({ paid: false }, { headers: CORS });
+    }
+  }
+
   const { password } = body ?? {};
   if (!password) return NextResponse.json({ error: "Missing fields" }, { status: 400, headers: CORS });
 
