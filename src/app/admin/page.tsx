@@ -2201,7 +2201,7 @@ const MSG: Record<LangCode, (name: string, plural: string, label: string) => { s
   }),
   en: (name, plural, label) => ({
     subject: `Free website + leads for your ${label} business`,
-    body: `Hi ${name || "[name]"},\n\nI help small ${plural} get more clients through Google and Facebook ads — and I'll build you a brand new website and landing page completely free of charge.\n\nYou only pay per enquiry you receive (pay-per-lead), so there's no fixed monthly price and no risk.\n\nThe first 30 days of lead generation are free.\n\nFeel free to reply if this sounds interesting.`,
+    body: `Hi ${name || "[name]"},\n\nI help small ${plural} get more clients through Google and Facebook ads.\n\nAs part of the deal, we build you a brand new website and landing page — included for free as long as you're running leads with us.\n\nYou only pay per enquiry you receive (pay-per-lead), so no fixed monthly price and no risk.\n\nThe first 30 days are completely free.\n\nFeel free to reply if this sounds interesting.`,
   }),
   de: (name, plural, label) => ({
     subject: `Kostenlose Leads fur Ihr ${label}unternehmen - 30 Tage gratis`,
