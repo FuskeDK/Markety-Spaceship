@@ -2036,7 +2036,7 @@ const SUBJECT_VARIANTS = (label: string): string[] => [
 
 function matchesEmployeeCount(employees: string | null, count: string): boolean {
   if (!count.trim()) return true;
-  if (!employees) return false;
+  if (!employees) return true;
   const n = parseInt(count);
   if (isNaN(n)) return true;
   if (employees.includes("+")) return n >= parseInt(employees);
@@ -2126,10 +2126,8 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
     if (!query.trim()) return;
     setLoading(true);
     if (attempt === 0) { setResult(null); setNotFound(false); setUsed(false); }
-    const cityMod = attempt === 0 && !city.trim()
-      ? ""
-      : city.trim() || ENGLISH_CITIES[attempt % ENGLISH_CITIES.length];
-    const q = cityMod ? `${query.trim()} ${cityMod}` : query.trim();
+    const cityMod = city.trim() || ENGLISH_CITIES[attempt % ENGLISH_CITIES.length];
+    const q = `${query.trim()} ${cityMod}`;
     try {
       const r = await fetch(`/api/admin?action=find-companies&q=${encodeURIComponent(q)}`);
       const d = await r.json();
