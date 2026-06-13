@@ -172,42 +172,46 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true });
     }
 
-    // ── Company finder (DuckDuckGo HTML search + Claude) ──────────────────────
+    // ── Company finder (Brave Search API + Claude) ────────────────────────────
     if (req.method === "GET" && action === "find-companies") {
       const q = searchParams.get("q") ?? "";
       if (!q) return NextResponse.json({ result: null });
 
+      const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+      if (!braveKey) {
+        console.error("find-companies: BRAVE_SEARCH_API_KEY not set");
+        return NextResponse.json({ result: null });
+      }
+
       try {
-        // DuckDuckGo HTML search — no API key needed
-        const ddgRes = await fetch(
-          `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q + " contact email")}&kl=uk-en`,
+        // Brave Search API — designed for server-side use
+        const braveRes = await fetch(
+          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q + " contact email UK")}&count=10&country=GB&search_lang=en`,
           {
             headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "Accept-Language": "en-GB,en;q=0.9",
+              "Accept": "application/json",
+              "Accept-Encoding": "gzip",
+              "X-Subscription-Token": braveKey,
             },
           }
         );
-        if (!ddgRes.ok) {
-          console.error("find-companies: DDG returned status", ddgRes.status);
+        if (!braveRes.ok) {
+          console.error("find-companies: Brave Search returned status", braveRes.status, await braveRes.text());
           return NextResponse.json({ result: null });
         }
-        const html = await ddgRes.text();
-        const searchText = html
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
+        const braveData = await braveRes.json() as {
+          web?: { results?: Array<{ title: string; url: string; description?: string; extra_snippets?: string[] }> };
+        };
+        const results = braveData.web?.results ?? [];
+        if (results.length === 0) {
+          console.error("find-companies: Brave Search returned no results");
+          return NextResponse.json({ result: null });
+        }
+        const searchText = results
+          .map(r => `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.description ?? ""}\n${(r.extra_snippets ?? []).join(" ")}`)
+          .join("\n---\n")
           .slice(0, 6000);
 
-        if (!searchText || searchText.length < 50) {
-          console.error("find-companies: DDG returned no useful content");
-          return NextResponse.json({ result: null });
-        }
 
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
