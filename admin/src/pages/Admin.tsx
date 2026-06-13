@@ -1799,173 +1799,48 @@ function ClientCard({ client, expanded, onToggle, onInvoice, adminPw, onInvoiceS
   );
 }
 
-type LangCode = "da" | "en" | "de" | "sv" | "no" | "sq" | "nl" | "pl" | "fr" | "es";
+type LangCode = "en";
 
-const LANGUAGES: { code: LangCode; label: string }[] = [
-  { code: "da", label: "Dansk" },
-  { code: "en", label: "English" },
-  { code: "de", label: "Deutsch" },
-  { code: "sv", label: "Svenska" },
-  { code: "no", label: "Norsk" },
-  { code: "sq", label: "Shqip (Albanian)" },
-  { code: "nl", label: "Nederlands" },
-  { code: "pl", label: "Polski" },
-  { code: "fr", label: "Français" },
-  { code: "es", label: "Español" },
+const INDUSTRIES: { value: string; label: string; plural: string }[] = [
+  { value: "plumbing",        label: "Plumber",          plural: "plumbing companies" },
+  { value: "carpentry",       label: "Carpenter",        plural: "carpentry companies" },
+  { value: "painting",        label: "Painter",          plural: "painting companies" },
+  { value: "roofing",         label: "Roofer",           plural: "roofing companies" },
+  { value: "electrical",      label: "Electrician",      plural: "electrical companies" },
+  { value: "cleaning",        label: "Cleaner",          plural: "cleaning companies" },
+  { value: "landscaping",     label: "Landscaper",       plural: "landscaping companies" },
+  { value: "car mechanic",    label: "Car Mechanic",     plural: "car repair shops" },
+  { value: "hairdresser",     label: "Hairdresser",      plural: "hair salons" },
+  { value: "personal trainer",label: "Personal Trainer", plural: "personal trainers" },
+  { value: "physiotherapy",   label: "Physiotherapist",  plural: "physiotherapy clinics" },
+  { value: "accounting",      label: "Accountant",       plural: "accounting firms" },
+  { value: "locksmith",       label: "Locksmith",        plural: "locksmith companies" },
+  { value: "masonry",         label: "Mason",            plural: "masonry companies" },
+  { value: "property service",label: "Property Service", plural: "property service companies" },
+  { value: "other",           label: "Other",            plural: "businesses" },
 ];
-
-const INDUSTRIES: { value: string; labels: Record<LangCode, string>; plurals: Record<LangCode, string> }[] = [
-  { value: "vvs", labels: { da: "VVS", en: "plumbing", de: "Sanitär", sv: "VVS", no: "VVS", sq: "hidraulikë", nl: "loodgieters", pl: "hydraulik", fr: "plomberie", es: "fontanería" }, plurals: { da: "VVS-firmaer", en: "plumbing companies", de: "Sanitärfirmen", sv: "VVS-företag", no: "VVS-firmaer", sq: "firma hidraulike", nl: "loodgietersbedrijven", pl: "firmy hydrauliczne", fr: "entreprises de plomberie", es: "empresas de fontanería" } },
-  { value: "tømrer", labels: { da: "Tømrer", en: "carpentry", de: "Zimmerei", sv: "Timmerman", no: "Tømrer", sq: "marangoz", nl: "timmerman", pl: "ciesielstwo", fr: "menuiserie", es: "carpintería" }, plurals: { da: "tømrerfirmaer", en: "carpentry companies", de: "Zimmereien", sv: "snickeriföretag", no: "tømrerfirmaer", sq: "firma marangozie", nl: "timmerbedrijven", pl: "firmy stolarskie", fr: "entreprises de menuiserie", es: "empresas de carpintería" } },
-  { value: "maler", labels: { da: "Maler", en: "painting", de: "Malerei", sv: "Måleri", no: "Maler", sq: "piktor", nl: "schilder", pl: "malarz", fr: "peinture", es: "pintura" }, plurals: { da: "malerfirmaer", en: "painting companies", de: "Malereien", sv: "måleriföretag", no: "malerfirmaer", sq: "firma pikture", nl: "schildersbedrijven", pl: "firmy malarskie", fr: "entreprises de peinture", es: "empresas de pintura" } },
-  { value: "murer", labels: { da: "Murer", en: "masonry", de: "Maurer", sv: "Murare", no: "Murer", sq: "murator", nl: "metselaar", pl: "murarz", fr: "maçon", es: "albañilería" }, plurals: { da: "murerfirmaer", en: "masonry companies", de: "Maurerbetriebe", sv: "mureriföretag", no: "murerfirmaer", sq: "firma muratorie", nl: "metselbedrijven", pl: "firmy murarskie", fr: "entreprises de maçonnerie", es: "empresas de albañilería" } },
-  { value: "tagdækker", labels: { da: "Tagdækker", en: "roofing", de: "Dachdecker", sv: "Takläggare", no: "Taklegger", sq: "çatist", nl: "dakdekker", pl: "dekarz", fr: "couvreur", es: "techador" }, plurals: { da: "tagdækkerfirmaer", en: "roofing companies", de: "Dachdeckerbetriebe", sv: "takläggningsföretag", no: "tagleggerfirmaer", sq: "firma çatistësh", nl: "dakdekkersbedrijven", pl: "firmy dekarskie", fr: "entreprises de toiture", es: "empresas de techado" } },
-  { value: "elektriker", labels: { da: "Elektriker", en: "electrical", de: "Elektro", sv: "Elektriker", no: "Elektriker", sq: "elektrik", nl: "elektricien", pl: "elektryk", fr: "électricité", es: "electricidad" }, plurals: { da: "elektrikerfirmaer", en: "electrical companies", de: "Elektrobetriebe", sv: "elföretag", no: "elektrikerfirmaer", sq: "firma elektrike", nl: "elektriciensbedrijven", pl: "firmy elektryczne", fr: "entreprises électriques", es: "empresas de electricidad" } },
-  { value: "rengøring", labels: { da: "Rengøring", en: "cleaning", de: "Reinigung", sv: "Städ", no: "Rengjøring", sq: "pastrim", nl: "schoonmaak", pl: "sprzątanie", fr: "nettoyage", es: "limpieza" }, plurals: { da: "rengøringsfirmaer", en: "cleaning companies", de: "Reinigungsfirmen", sv: "städföretag", no: "rengjøringsfirmaer", sq: "firma pastrimi", nl: "schoonmaakbedrijven", pl: "firmy sprzątające", fr: "entreprises de nettoyage", es: "empresas de limpieza" } },
-  { value: "automekaniker", labels: { da: "Automekaniker", en: "car mechanic", de: "Kfz-Mechaniker", sv: "Bilmekaniker", no: "Bilmekaniker", sq: "mekanik makine", nl: "automonteur", pl: "mechanik samochodowy", fr: "mécanicien auto", es: "mecánico de coches" }, plurals: { da: "autoværksteder", en: "car repair shops", de: "Kfz-Werkstätten", sv: "bilverkstäder", no: "bilverksteder", sq: "garazhe mekanikësh", nl: "autogarages", pl: "warsztaty samochodowe", fr: "garages automobiles", es: "talleres mecánicos" } },
-  { value: "frisør", labels: { da: "Frisør", en: "hairdresser", de: "Friseur", sv: "Frisör", no: "Frisør", sq: "parukier", nl: "kapper", pl: "fryzjer", fr: "coiffeur", es: "peluquería" }, plurals: { da: "frisørsaloner", en: "hair salons", de: "Friseursalons", sv: "frisörsalonger", no: "frisørsalonger", sq: "salona parukieresh", nl: "kapperszaken", pl: "salony fryzjerskie", fr: "salons de coiffure", es: "peluquerías" } },
-  { value: "ejendomsmægler", labels: { da: "Ejendomsmægler", en: "real estate", de: "Immobilien", sv: "Fastighetsmäklare", no: "Eiendomsmegler", sq: "agjent i patunësive", nl: "makelaar", pl: "nieruchomości", fr: "immobilier", es: "inmobiliaria" }, plurals: { da: "ejendomsmæglere", en: "real estate agents", de: "Immobilienmakler", sv: "fastighetsmäklare", no: "eiendomsmeglere", sq: "agjentë patunësi", nl: "makelaars", pl: "agenci nieruchomości", fr: "agents immobiliers", es: "agentes inmobiliarios" } },
-  { value: "ejendomsservice", labels: { da: "Ejendomsservice", en: "property service", de: "Hausmeisterservice", sv: "Fastighetsservice", no: "Eiendomsservice", sq: "shërbim prone", nl: "vastgoedservice", pl: "zarządzanie nieruchomościami", fr: "service immobilier", es: "servicios inmobiliarios" }, plurals: { da: "ejendomsservicefirmaer", en: "property service companies", de: "Hausmeisterservices", sv: "fastighetsserviceföretag", no: "eiendomsservicefirmaer", sq: "firma shërbimi prone", nl: "vastgoedservicebedrijven", pl: "firmy zarządzania nieruchomościami", fr: "entreprises de service immobilier", es: "empresas de servicios inmobiliarios" } },
-  { value: "personlig træner", labels: { da: "Personlig træner", en: "personal trainer", de: "Personal Trainer", sv: "Personlig tränare", no: "Personlig trener", sq: "trajner personal", nl: "personal trainer", pl: "trener personalny", fr: "coach sportif", es: "entrenador personal" }, plurals: { da: "personlige trænere", en: "personal trainers", de: "Personal Trainer", sv: "personliga tränare", no: "personlige trenere", sq: "trajnerë personalë", nl: "personal trainers", pl: "trenerzy personalni", fr: "coachs sportifs", es: "entrenadores personales" } },
-  { value: "tandlæge", labels: { da: "Tandlæge", en: "dental", de: "Zahnarzt", sv: "Tandläkare", no: "Tannlege", sq: "stomatolog", nl: "tandarts", pl: "stomatolog", fr: "dentiste", es: "dentista" }, plurals: { da: "tandlægeklinikker", en: "dental clinics", de: "Zahnarztpraxen", sv: "tandvårdskliniker", no: "tannlegeklinikker", sq: "klinika stomatologjike", nl: "tandartspraktijken", pl: "kliniki stomatologiczne", fr: "cabinets dentaires", es: "clínicas dentales" } },
-  { value: "fysioterapeut", labels: { da: "Fysioterapeut", en: "physiotherapy", de: "Physiotherapie", sv: "Sjukgymnastik", no: "Fysioterapi", sq: "fizioterapi", nl: "fysiotherapie", pl: "fizjoterapia", fr: "kinésithérapie", es: "fisioterapia" }, plurals: { da: "fysioterapiklinikker", en: "physiotherapy clinics", de: "Physiotherapiepraxen", sv: "sjukgymnastikmottagningar", no: "fysioterapiklinikker", sq: "klinika fizioterapie", nl: "fysiotherapiepraktijken", pl: "kliniki fizjoterapii", fr: "cabinets de kinésithérapie", es: "clínicas de fisioterapia" } },
-  { value: "advokat", labels: { da: "Advokat", en: "law firm", de: "Anwaltskanzlei", sv: "Advokatbyrå", no: "Advokatfirma", sq: "avokat", nl: "advocatenkantoor", pl: "kancelaria prawna", fr: "cabinet d'avocats", es: "despacho de abogados" }, plurals: { da: "advokatfirmaer", en: "law firms", de: "Anwaltskanzleien", sv: "advokatbyråer", no: "advokatfirmaer", sq: "firma avokatore", nl: "advocatenkantoren", pl: "kancelarie prawne", fr: "cabinets d'avocats", es: "despachos de abogados" } },
-  { value: "revisor", labels: { da: "Revisor", en: "accounting", de: "Buchhaltung", sv: "Redovisning", no: "Regnskap", sq: "kontabilitet", nl: "boekhouding", pl: "księgowość", fr: "comptabilité", es: "contabilidad" }, plurals: { da: "revisorfirmaer", en: "accounting firms", de: "Buchhaltungsfirmen", sv: "redovisningsföretag", no: "regnskapsfirmaer", sq: "firma kontabiliteti", nl: "accountantskantoren", pl: "biura rachunkowe", fr: "cabinets comptables", es: "empresas de contabilidad" } },
-  { value: "arkitekt", labels: { da: "Arkitekt", en: "architecture", de: "Architekt", sv: "Arkitekt", no: "Arkitekt", sq: "arkitekt", nl: "architect", pl: "architekt", fr: "architecte", es: "arquitecto" }, plurals: { da: "arkitektfirmaer", en: "architecture firms", de: "Architekturbüros", sv: "arkitektkontor", no: "arkitektfirmaer", sq: "firma arkitekture", nl: "architectenbureaus", pl: "biura architektoniczne", fr: "cabinets d'architecture", es: "estudios de arquitectura" } },
-  { value: "låsesmed", labels: { da: "Låsesmed", en: "locksmith", de: "Schlüsseldienst", sv: "Låssmed", no: "Låsesmed", sq: "çelësar", nl: "slotenmaker", pl: "ślusarz", fr: "serrurier", es: "cerrajero" }, plurals: { da: "låsesmedefirmaer", en: "locksmith companies", de: "Schlüsseldienstfirmen", sv: "låssmedsföretag", no: "låsesmedefirmaer", sq: "firma çelësarësh", nl: "slotenmakersbedrijven", pl: "firmy ślusarskie", fr: "entreprises de serrurerie", es: "empresas de cerrajería" } },
-  { value: "other", labels: { da: "Andet", en: "Other", de: "Andere", sv: "Annat", no: "Annet", sq: "Tjeter", nl: "Anders", pl: "Inne", fr: "Autre", es: "Otro" }, plurals: { da: "virksomheder", en: "businesses", de: "Unternehmen", sv: "företag", no: "bedrifter", sq: "biznese", nl: "bedrijven", pl: "firmy", fr: "entreprises", es: "empresas" } },
-];
-
-const INDUSTRY_ALIASES: Record<string, string> = {
-  "tagrens": "tagdækker", "tagsten": "tagdækker", "tagrenovering": "tagdækker",
-  "rens": "rengøring", "vinduespolering": "rengøring", "vinduespudsning": "rengøring", "erhvervsrengøring": "rengøring",
-  "snedker": "tømrer", "gulv": "tømrer", "bygge": "tømrer", "renovering": "tømrer",
-  "sanitær": "vvs", "blik": "vvs", "varmepumpe": "vvs", "kloak": "vvs",
-  "el-": "elektriker", "elinstall": "elektriker",
-  "mekaniker": "automekaniker", "værksted": "automekaniker", "bilreparation": "automekaniker",
-  "hår": "frisør", "salon": "frisør", "barber": "frisør",
-  "tand": "tandlæge", "dental": "tandlæge",
-  "ejendom": "ejendomsmægler", "bolighandel": "ejendomsmægler", "boligsalg": "ejendomsmægler",
-  "fitness": "personlig træner", "motion": "personlig træner", "træning": "personlig træner",
-  "bogfør": "revisor", "regnskab": "revisor", "skatterådgivning": "revisor",
-  "jura": "advokat", "juridisk": "advokat",
-  "lås": "låsesmed",
-  "fysio": "fysioterapeut", "genoptræning": "fysioterapeut",
-  "psykolog": "other",
-};
 
 const detectIndustry = (query: string): string | null => {
   const q = query.toLowerCase();
-  // Check aliases first (more specific)
-  for (const [keyword, industry] of Object.entries(INDUSTRY_ALIASES)) {
-    if (q.includes(keyword)) return industry;
-  }
-  // Then check industry values and labels
   for (const ind of INDUSTRIES) {
     if (ind.value === "other") continue;
-    if (q.includes(ind.value.toLowerCase())) return ind.value;
-    for (const label of Object.values(ind.labels)) {
-      if (label.length > 3 && q.includes(label.toLowerCase())) return ind.value;
-    }
+    if (q.includes(ind.value.toLowerCase()) || q.includes(ind.label.toLowerCase())) return ind.value;
   }
   return null;
 };
 
-const MSG: Record<LangCode, (name: string, plural: string, label: string) => { subject: string; body: string }> = {
-  da: (name, plural, label) => ({
-    subject: `Gratis leads de første 30 dage - ${label}`,
-    body: `Hej ${name || "[navn]"},\n\nJeg hjælper små ${plural} med at få flere kunder ind via Google og Facebook annoncer, uden at I selv skal bruge tid på det.\nVi bruger en pay-per-lead model som vil sige i kun betaler per henvendelse i har fået, ikke en fast månedelig pris.\n\nDe første 30 dage er gratis.\nKontakt os gerne hvis det lyder interessant.`,
-  }),
-  en: (name, plural, label) => ({
+function getMsg(name: string, plural: string, label: string): { subject: string; body: string } {
+  return {
     subject: `Free leads for your ${label} business - first 30 days`,
     body: `Hi ${name || "[name]"},\n\nI help small ${plural} get more clients through Google and Facebook ads, without you having to spend time on it yourself.\nWe use a pay-per-lead model, meaning you only pay per enquiry you receive - no fixed monthly price.\n\nThe first 30 days are free.\nFeel free to reply if this sounds interesting.`,
-  }),
-  de: (name, plural, label) => ({
-    subject: `Kostenlose Leads fur Ihr ${label}unternehmen - 30 Tage gratis`,
-    body: `Hallo ${name || "[Name]"},\n\nich helfe kleinen ${plural}, mehr Kunden uber Google- und Facebook-Anzeigen zu gewinnen, ohne dass Sie selbst Zeit investieren mussen.\nWir nutzen ein Pay-per-Lead-Modell, das heisst Sie zahlen nur pro erhaltener Anfrage - kein fester Monatspreis.\n\nDie ersten 30 Tage sind kostenlos.\nAntworten Sie gerne, wenn das interessant klingt.`,
-  }),
-  sv: (name, plural, label) => ({
-    subject: `Gratis leads till ditt ${label}foretag - forsta 30 dagarna`,
-    body: `Hej ${name || "[namn]"},\n\njag hjalper sma ${plural} att fa fler kunder via Google- och Facebook-annonser, utan att ni sjalva behover lagga tid pa det.\nVi anvander en pay-per-lead-modell, vilket innebar att ni bara betalar per fragan ni far - inget fast manadspris.\n\nDe forsta 30 dagarna ar gratis.\nSkriv garnt tillbaka om det later intressant.`,
-  }),
-  no: (name, plural, label) => ({
-    subject: `Gratis leads til ditt ${label}firma - forste 30 dager`,
-    body: `Hei ${name || "[navn]"},\n\njeg hjelper sma ${plural} med a fa flere kunder via Google- og Facebook-annonser, uten at dere selv trenger a bruke tid pa det.\nVi bruker en pay-per-lead-modell, som betyr at dere kun betaler per henvendelse dere mottar - ingen fast manedspris.\n\nDe forste 30 dagene er gratis.\nSkriv gjerne tilbake om det hores interessant ut.`,
-  }),
-  sq: (name, plural, label) => ({
-    subject: `Leads falas per biznesin tuaj te ${label} - 30 ditet e para`,
-    body: `Pershendetje ${name || "[emer]"},\n\nune ndihmoj ${plural} te vogla te marrin me shume klientet nepermjet reklamave ne Google dhe Facebook, pa pasur nevoje te shpenzoni kohen tuaj.\nNe perdorim modelin pay-per-lead, qe do te thote ju paguani vetem per cdo kerkese qe merrni - pa cmim fiks mujor.\n\n30 ditet e para jane falas.\nMe shkruani nese kjo tingellon interesante.`,
-  }),
-  nl: (name, plural, label) => ({
-    subject: `Gratis leads voor uw ${label}bedrijf - eerste 30 dagen`,
-    body: `Hallo ${name || "[naam]"},\n\nik help kleine ${plural} meer klanten te krijgen via Google- en Facebook-advertenties, zonder dat u er zelf tijd in hoeft te steken.\nWij gebruiken een pay-per-lead model, wat betekent dat u alleen betaalt per ontvangen aanvraag - geen vaste maandprijs.\n\nDe eerste 30 dagen zijn gratis.\nReageer gerust als dit interessant klinkt.`,
-  }),
-  pl: (name, plural, label) => ({
-    subject: `Bezplatne leady dla firmy ${label} - pierwsze 30 dni`,
-    body: `Czesc ${name || "[imie]"},\n\npomagam malym ${plural} zdobywac wiecej klientow poprzez reklamy Google i Facebook, bez koniecznosci poswiecania wlasnego czasu.\nStosujemy model pay-per-lead, co oznacza, ze placisz tylko za kazde otrzymane zapytanie - bez stalej miesiecznej oplaty.\n\nPierwsze 30 dni jest bezplatne.\nOdpisz, jesli brzmi to interesujaco.`,
-  }),
-  fr: (name, plural, label) => ({
-    subject: `Leads gratuits pour votre entreprise ${label} - 30 premiers jours`,
-    body: `Bonjour ${name || "[prenom]"},\n\nje aide les petites ${plural} a obtenir plus de clients via les publicites Google et Facebook, sans que vous ayez a y consacrer du temps.\nNous utilisons un modele pay-per-lead, ce qui signifie que vous ne payez que par demande recue - pas de prix mensuel fixe.\n\nLes 30 premiers jours sont gratuits.\nN'hesitez pas a repondre si cela vous interesse.`,
-  }),
-  es: (name, plural, label) => ({
-    subject: `Leads gratuitos para su empresa de ${label} - primeros 30 dias`,
-    body: `Hola ${name || "[nombre]"},\n\nayudo a pequenas ${plural} a conseguir mas clientes a traves de anuncios en Google y Facebook, sin que usted tenga que dedicar tiempo a ello.\nUsamos un modelo de pago por lead, lo que significa que solo paga por cada consulta recibida - sin precio mensual fijo.\n\nLos primeros 30 dias son gratuitos.\nNo dude en responder si le parece interesante.`,
-  }),
-};
+  };
+}
 
-const SUBJECT_VARIANTS: Record<LangCode, (label: string) => string[]> = {
-  da: (l) => [
-    `Gratis leads de første 30 dage - ${l}`,
-    `Kun betaling når du får kunder - ${l}firma`,
-    `Mere vækst til dit ${l}firma - ingen fastpris`,
-  ],
-  en: (l) => [
-    `Free leads for your ${l} business - first 30 days`,
-    `You only pay when you get clients - ${l}`,
-    `More ${l} clients - no fixed monthly price`,
-  ],
-  de: (l) => [
-    `Kostenlose Leads fur Ihr ${l}unternehmen - 30 Tage gratis`,
-    `Sie zahlen nur fur Ergebnisse - ${l}`,
-    `Mehr ${l}kunden - kein fester Monatspreis`,
-  ],
-  sv: (l) => [
-    `Gratis leads till ditt ${l}foretag - forsta 30 dagarna`,
-    `Du betalar bara nar du far kunder - ${l}`,
-    `Fler ${l}kunder - inget fast manadspris`,
-  ],
-  no: (l) => [
-    `Gratis leads til ditt ${l}firma - forste 30 dager`,
-    `Du betaler bare nar du far kunder - ${l}`,
-    `Flere ${l}kunder - ingen fast manedspris`,
-  ],
-  sq: (l) => [
-    `Leads falas per biznesin tuaj te ${l} - 30 ditet e para`,
-    `Paguani vetem kur merrni klientet - ${l}`,
-    `Me shume klientet per ${l} - pa cmim fiks`,
-  ],
-  nl: (l) => [
-    `Gratis leads voor uw ${l}bedrijf - eerste 30 dagen`,
-    `U betaalt alleen voor resultaten - ${l}`,
-    `Meer ${l}klanten - geen vaste maandprijs`,
-  ],
-  pl: (l) => [
-    `Bezplatne leady dla firmy ${l} - pierwsze 30 dni`,
-    `Placisz tylko za wyniki - ${l}`,
-    `Wiecej klientow dla ${l} - bez stalej oplaty`,
-  ],
-  fr: (l) => [
-    `Leads gratuits pour votre entreprise ${l} - 30 premiers jours`,
-    `Vous ne payez que pour les resultats - ${l}`,
-    `Plus de clients ${l} - sans prix mensuel fixe`,
-  ],
-  es: (l) => [
-    `Leads gratuitos para su empresa de ${l} - primeros 30 dias`,
-    `Solo paga cuando consigue clientes - ${l}`,
-    `Mas clientes de ${l} - sin precio mensual fijo`,
-  ],
-};
+const SUBJECT_VARIANTS = (label: string): string[] => [
+  `Free leads for your ${label} business - first 30 days`,
+  `You only pay when you get clients - ${label}`,
+  `More ${label} clients - no fixed monthly price`,
+];
 
 function matchesEmployeeCount(employees: string | null, count: string): boolean {
   if (!count.trim()) return true;
@@ -1978,11 +1853,12 @@ function matchesEmployeeCount(employees: string | null, count: string): boolean 
   return n >= parseInt(parts[0]) && n <= parseInt(parts[1]);
 }
 
-const DANISH_CITIES = [
-  "København", "Aarhus", "Odense", "Aalborg", "Esbjerg", "Randers", "Kolding",
-  "Horsens", "Vejle", "Roskilde", "Helsingør", "Silkeborg", "Næstved", "Fredericia",
-  "Viborg", "Køge", "Holstebro", "Slagelse", "Hillerød", "Herning", "Sønderborg",
-  "Svendborg", "Hjørring", "Holbæk", "Frederikshavn", "Skive", "Thisted", "Ringsted",
+const ENGLISH_CITIES = [
+  "London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Sheffield", "Edinburgh",
+  "Bristol", "Liverpool", "Cardiff", "Nottingham", "Leicester", "Coventry", "Bradford",
+  "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia",
+  "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville",
+  "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Auckland",
 ];
 
 type CvrResult = {
@@ -2051,7 +1927,7 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
   const [notFound, setNotFound] = useState(false);
   const [used, setUsed] = useState(false);
   const [cityAttempt, setCityAttempt] = useState(0);
-  const [employeeCount, setEmployeeCount] = useState("");
+  const [employeeCount, setEmployeeCount] = useState("3");
   const [contacted, setContacted] = useState<Set<number>>(() => getContacted());
 
   const doSearch = async (attempt: number, empCount = employeeCount) => {
@@ -2060,14 +1936,14 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
     if (attempt === 0) { setResult(null); setNotFound(false); setUsed(false); }
     const cityMod = attempt === 0 && !city.trim()
       ? ""
-      : city.trim() || DANISH_CITIES[attempt % DANISH_CITIES.length];
+      : city.trim() || ENGLISH_CITIES[attempt % ENGLISH_CITIES.length];
     const q = cityMod ? `${query.trim()} ${cityMod}` : query.trim();
     try {
       const r = await fetch(`/api/admin?action=find-companies&q=${encodeURIComponent(q)}`);
       const d = await r.json();
       if (d.result && d.result.name) {
         const alreadyContacted = d.result.vat && getContacted().has(d.result.vat);
-        if ((!matchesEmployeeCount(d.result.employees, empCount) || alreadyContacted) && attempt < 15) {
+        if ((!d.result.email || !matchesEmployeeCount(d.result.employees, empCount) || alreadyContacted) && attempt < 15) {
           setCityAttempt(attempt + 1);
           await doSearch(attempt + 1, empCount);
           return;
@@ -2104,14 +1980,14 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
   const firstName = ownerName.split(" ")[0] ?? "";
   const address = result ? `${result.address}, ${result.zipcode} ${result.city}` : "";
   const websiteUrl = result?.homepage ?? null;
-  const googleUrl = result ? `https://www.google.com/search?q=${encodeURIComponent(result.name + " " + result.city + " hjemmeside")}` : "";
+  const googleUrl = result ? `https://www.google.com/search?q=${encodeURIComponent(result.name + " " + result.city + " website")}` : "";
   const linkedInUrl = result ? `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(result.name)}` : "";
 
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-0.5">Company finder</p>
-        <p className="text-xs text-gray-400">Search the Danish company registry (CVR).</p>
+        <p className="text-xs text-gray-400">Search for English-speaking small businesses (UK, US, AU).</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -2119,14 +1995,14 @@ function CompanyFinder({ onSelect }: { onSelect: (firstName: string, industryHin
           <label className="text-xs font-semibold text-gray-500">Keyword</label>
           <input value={query} onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && search()}
-            placeholder="VVS, tømrer, maler..."
+            placeholder="plumber, carpenter, electrician..."
             className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-gray-500">City (optional)</label>
           <input value={city} onChange={e => setCity(e.target.value)}
             onKeyDown={e => e.key === "Enter" && search()}
-            placeholder="Odense, Aarhus..."
+            placeholder="London, Manchester..."
             className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
         </div>
         <div className="flex flex-col gap-1.5 col-span-2">
@@ -2227,7 +2103,6 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
   const [companyName, setCompanyName] = useState("");
   const [industryVal, setIndustryVal] = useState(INDUSTRIES[0].value);
   const [customIndustry, setCustomIndustry] = useState("");
-  const [lang, setLang] = useState<LangCode>("da");
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [copiedBody, setCopiedBody] = useState(false);
   const [sending, setSending] = useState(false);
@@ -2240,13 +2115,13 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
 
   const isCustom = industryVal === "other";
   const selected = INDUSTRIES.find(i => i.value === industryVal) ?? INDUSTRIES[0];
-  const plural = isCustom ? customIndustry || "virksomheder" : selected.plurals[lang];
-  const label = isCustom ? customIndustry || "virksomhed" : selected.labels[lang];
-  const subjectVariants = SUBJECT_VARIANTS[lang](label);
+  const plural = isCustom ? customIndustry || "businesses" : selected.plural;
+  const label = isCustom ? customIndustry || "business" : selected.label;
+  const subjectVariants = SUBJECT_VARIANTS(label);
   const generatedSubject = companyName
-    ? `Mere vækst til ${companyName}`
+    ? `More clients for ${companyName}`
     : subjectVariants[subjectIdx % subjectVariants.length];
-  const { body: generatedBody } = MSG[lang](name, plural, label);
+  const { body: generatedBody } = getMsg(name, plural, label);
 
   const [editableSubject, setEditableSubject] = useState(generatedSubject);
   const [editableBody, setEditableBody] = useState(generatedBody);
@@ -2270,13 +2145,13 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
     const industry = validIndustries[Math.floor(Math.random() * validIndustries.length)];
     for (let attempt = 0; attempt < 15; attempt++) {
       try {
-        const city = DANISH_CITIES[(Math.floor(Math.random() * DANISH_CITIES.length) + attempt) % DANISH_CITIES.length];
+        const city = ENGLISH_CITIES[(Math.floor(Math.random() * ENGLISH_CITIES.length) + attempt) % ENGLISH_CITIES.length];
         const q = `${industry.value} ${city}`;
         const r = await fetch(`/api/admin?action=find-companies&q=${encodeURIComponent(q)}`);
         const d = await r.json();
         if (d.result?.name) {
           const alreadyContacted = d.result.vat && getContacted().has(d.result.vat);
-          if (alreadyContacted) continue;
+          if (alreadyContacted || !d.result.email) continue;
           setAutoResult(d.result);
           const ownerName = d.result.owners?.[0]?.name ?? "";
           const firstName = ownerName.split(" ")[0] ?? "";
@@ -2302,7 +2177,6 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
           homepage: autoResult.homepage,
           companyName: autoResult.name,
           industry: industryVal,
-          lang,
         }),
       });
       const d = await r.json();
@@ -2408,20 +2282,13 @@ function OutreachTab({ authedPw }: { authedPw: string }) {
                 <label className="text-xs font-semibold text-gray-500">Industry</label>
                 <select value={industryVal} onChange={e => setIndustryVal(e.target.value)}
                   className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white">
-                  {INDUSTRIES.map(i => <option key={i.value} value={i.value}>{i.labels.da}</option>)}
+                  {INDUSTRIES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                 </select>
                 {isCustom && (
                   <input value={customIndustry} onChange={e => setCustomIndustry(e.target.value)}
                     placeholder="Type industry manually..."
                     className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200" />
                 )}
-              </div>
-              <div className="flex flex-col gap-1.5 col-span-2">
-                <label className="text-xs font-semibold text-gray-500">Language</label>
-                <select value={lang} onChange={e => setLang(e.target.value as LangCode)}
-                  className="h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white">
-                  {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-                </select>
               </div>
             </div>
           </div>

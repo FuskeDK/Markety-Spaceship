@@ -1,11 +1,11 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { DashedLine } from "../dashed-line";
-import { Card, CardContent } from "@/components/ui/card";
 import type { SiteStrings } from "@/i18n/site-translations";
 
-const IMAGES = ["/features/triage-card.svg", "/features/cycle-card.svg", "/features/overview-card.svg"];
+const CARD_DESCRIPTIONS = [
+  "Automated email sequences that warm up prospects, handle follow-ups, and book calls — without you lifting a finger.",
+  "Google, Meta, and LinkedIn campaigns managed daily. We test, cut the losers, and scale what works.",
+  "High-converting landing pages tailored to your audience, built and A/B tested until they perform.",
+];
 
 export const Features = ({ t }: { t: SiteStrings }) => {
   return (
@@ -18,41 +18,37 @@ export const Features = ({ t }: { t: SiteStrings }) => {
           </span>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-4xl items-start gap-3 md:gap-6 lg:mt-24 lg:grid-cols-2">
-          <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
-            {t.features.heading}
-          </h2>
-          <p className="text-muted-foreground leading-snug">
-            {t.features.subheading}
-          </p>
-        </div>
+        <div className="mx-auto mt-10 max-w-4xl lg:mt-24">
+          <div className="mb-10 grid items-start gap-4 md:mb-14 md:grid-cols-2 md:gap-8">
+            <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
+              {t.features.heading}
+            </h2>
+            <p className="text-muted-foreground leading-snug">
+              {t.features.subheading}
+            </p>
+          </div>
 
-        <Card className="mt-8 rounded-3xl md:mt-12 lg:mt-20">
-          <CardContent className="flex p-0 max-md:flex-col">
+          <div className="grid overflow-hidden rounded-2xl border md:grid-cols-3">
             {t.features.cards.map((title, i) => (
-              <div key={i} className="flex flex-1 max-md:flex-col">
-                <div className="flex-1 p-4 pe-0! md:p-6">
-                  <div className="relative aspect-[1.28/1] overflow-hidden">
-                    <Image src={IMAGES[i]} alt={`${title} interface`} fill className="object-cover object-left-top ps-4 pt-2" />
-                    <div className="from-background absolute inset-0 z-10 bg-linear-to-t via-transparent to-transparent" />
-                  </div>
-                  <Link href="#" className="group flex items-center justify-between gap-4 pe-4 pt-4 md:pe-6 md:pt-6">
-                    <h3 className="font-display max-w-60 text-2xl leading-tight font-bold tracking-tight">{title}</h3>
-                    <div className="rounded-full border p-2">
-                      <ChevronRight className="size-6 transition-transform group-hover:translate-x-1 lg:size-9" />
-                    </div>
-                  </Link>
+              <div
+                key={i}
+                className={[
+                  "flex flex-col gap-4 p-7",
+                  i < 2 ? "md:border-r" : "",
+                  i < t.features.cards.length - 1 ? "border-b md:border-b-0" : "",
+                ].join(" ")}
+              >
+                <span className="font-display select-none text-5xl font-bold leading-none text-purple-200 dark:text-purple-900">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="font-display text-xl font-bold tracking-tight">{title}</h3>
+                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{CARD_DESCRIPTIONS[i]}</p>
                 </div>
-                {i < t.features.cards.length - 1 && (
-                  <>
-                    <div className="relative hidden md:block"><DashedLine orientation="vertical" /></div>
-                    <div className="relative block md:hidden"><DashedLine orientation="horizontal" /></div>
-                  </>
-                )}
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </section>
   );

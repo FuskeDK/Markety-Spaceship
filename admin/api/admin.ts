@@ -196,45 +196,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ success: true });
   }
 
-  // ── Company finder (no auth required - uses public CVR API) ──────────────
+  // ── Company finder (English-speaking markets via Nimble + Claude) ─────────
   if (req.method === "GET" && action === "find-companies") {
     const q = req.query.q as string;
-    const vat = req.query.vat as string;
-    if (!q && !vat) return res.status(400).json({ error: "Query required" });
-    try {
-      const apiUrl = vat
-        ? `https://cvrapi.dk/api?vat=${encodeURIComponent(vat)}&country=dk`
-        : `https://cvrapi.dk/api?search=${encodeURIComponent(q)}&country=dk`;
-      const r = await fetch(
-        apiUrl,
-        { headers: { "User-Agent": "Markety/1.0 info@marketyleadgen.com" } }
-      );
-      if (!r.ok) return res.status(200).json({ result: null });
-      const data = await r.json();
+    if (!q) return res.status(200).json({ result: null });
 
-      // Try to get homepage from virk.dk official registry
-      if (data.vat && !data.homepage) {
+    const nimbleKey = process.env.NIMBLE_API_KEY;
+    if (!nimbleKey) return res.status(500).json({ error: "Nimble API key not configured" });
+
+    try {
+      // Search Google for a small English-speaking business matching this query
+      const searchUrl = `https://www.google.co.uk/search?q=${encodeURIComponent(q + " small business contact email")}&gl=gb&hl=en&num=8`;
+      const nimbleRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+        },
+        body: JSON.stringify({ url: searchUrl, render: false, format: "markdown", country: "GB" }),
+      });
+      const nimbleData = await nimbleRes.json();
+      const searchText = ((nimbleData?.parsing?.markdown ?? nimbleData?.data?.markdown ?? "") as string).slice(0, 5000);
+      if (!searchText) return res.status(200).json({ result: null });
+
+      // Claude haiku parses the search results into a structured company record
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const msg = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 350,
+        messages: [{
+          role: "user",
+          content: `From these Google search results, extract the FIRST small local business that appears to have 1-3 employees (owner-operated, sole trader, family business, one-man band, etc.). Skip large chains, franchises, and any business that obviously has more than 5 employees.
+
+Return ONLY a valid JSON object — no explanation, no markdown fences:
+{
+  "name": "Business Name",
+  "email": "info@example.com or null",
+  "phone": "+44 7700 000000 or null",
+  "homepage": "https://example.com or null",
+  "city": "London",
+  "address": "123 High Street, London",
+  "employees": "1-2",
+  "industrydesc": "Plumbing services",
+  "owners": [{"name": "John Smith"}]
+}
+
+If you cannot find a suitable micro-business, return exactly: {"result":null}
+
+Search results:
+${searchText}`,
+        }],
+      });
+
+      const raw = (msg.content[0] as { type: string; text: string }).text.trim();
+      let parsed: Record<string, unknown> | null = null;
+      try { parsed = JSON.parse(raw); } catch { return res.status(200).json({ result: null }); }
+      if (!parsed || parsed.result === null || !parsed.name) return res.status(200).json({ result: null });
+
+      // If we have a website but no email, scrape the contact page
+      if (parsed.homepage && !parsed.email) {
         try {
-          const virk = await fetch("https://data.virk.dk/v1/cvr-permanent/virksomhed/_search", {
+          const contactUrl = (parsed.homepage as string).replace(/\/$/, "") + "/contact";
+          const contactRes = await fetch("https://api.webit.live/api/v1/realtime/web", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "User-Agent": "Markety/1.0" },
-            body: JSON.stringify({
-              _source: ["Vrvirksomhed.hjemmeside"],
-              query: { term: { "Vrvirksomhed.cvrNummer": data.vat } },
-              size: 1,
-            }),
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Basic " + Buffer.from(`${nimbleKey}:${nimbleKey}`).toString("base64"),
+            },
+            body: JSON.stringify({ url: contactUrl, render: false, format: "markdown", country: "GB" }),
           });
-          if (virk.ok) {
-            const virkData = await virk.json();
-            const hits = virkData?.hits?.hits ?? [];
-            const homepage = hits[0]?._source?.Vrvirksomhed?.hjemmeside?.[0]?.kontaktoplysning;
-            if (homepage) data.homepage = homepage.startsWith("http") ? homepage : `https://${homepage}`;
-          }
-        } catch { /* ignore - homepage stays null */ }
+          const contactData = await contactRes.json();
+          const contactText = (contactData?.parsing?.markdown ?? contactData?.data?.markdown ?? "") as string;
+          const emailMatch = contactText.match(/[a-zA-Z0-9._%+-]+@(?!.*\.(png|jpg|gif|svg))[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          if (emailMatch) parsed.email = emailMatch[0];
+        } catch { /* email stays null */ }
       }
 
-      return res.status(200).json({ result: data });
-    } catch {
+      return res.status(200).json({
+        result: {
+          name: parsed.name ?? "",
+          email: parsed.email ?? null,
+          phone: parsed.phone ?? null,
+          homepage: parsed.homepage ?? null,
+          city: parsed.city ?? "",
+          zipcode: "",
+          address: parsed.address ?? "",
+          industrydesc: parsed.industrydesc ?? null,
+          employees: parsed.employees ?? "1-3",
+          owners: parsed.owners ?? null,
+          vat: null,
+        },
+      });
+    } catch (err) {
+      console.error("find-companies error:", err);
       return res.status(200).json({ result: null });
     }
   }
@@ -1289,7 +1344,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── Nimble: research company website and personalize outreach ───────────────
   if (req.method === "POST" && action === "research-company") {
-    const { homepage, companyName, industry, lang } = req.body ?? {};
+    const { homepage, companyName, industry } = req.body ?? {};
     if (!homepage) return res.status(400).json({ error: "homepage required" });
 
     const nimbleKey = process.env.NIMBLE_API_KEY;
@@ -1308,7 +1363,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           url: homepage,
           render: false,
           format: "markdown",
-          country: "DK",
+          country: "GB",
         }),
       });
       const nimbleData = await nimbleRes.json();
@@ -1325,9 +1380,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const langNames: Record<string, string> = { da: "Danish", en: "English", de: "German", sv: "Swedish", no: "Norwegian" };
-    const langName = langNames[lang as string] ?? "Danish";
-
     const prompt = `You are writing a cold outreach email for Markety, a pay-per-lead agency. We help small local businesses get more clients through Google and Facebook ads, paying only per lead received - no fixed monthly price. First 30 days are free.
 
 I scraped the homepage of a ${industry ?? "local business"} called "${companyName ?? "this company"}". Here is what their website says:
@@ -1336,7 +1388,7 @@ I scraped the homepage of a ${industry ?? "local business"} called "${companyNam
 ${siteContent}
 ---
 
-Write a short, personal cold email in ${langName}. Rules:
+Write a short, personal cold email in English. Rules:
 - 3-4 short paragraphs max
 - Reference something SPECIFIC from their website (a service, their tagline, a specific thing they do) in the first or second line - make it feel like you actually looked at their business
 - Mention Markety's pay-per-lead model and that the first 30 days are free

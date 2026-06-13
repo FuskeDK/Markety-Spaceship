@@ -1,18 +1,4 @@
-import Image from "next/image";
-
-import { ArrowRight } from "lucide-react";
-
 import { DashedLine } from "../dashed-line";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -21,56 +7,24 @@ const items = [
     author: "Amy Chase",
     role: "Founder",
     company: "E-commerce Brand",
-    image: "/testimonials/amy-chase.webp",
   },
   {
     quote: "We went from zero to 200+ qualified leads in the first two months.",
     author: "Jonas Kotara",
     role: "CEO",
     company: "SaaS Startup",
-    image: "/testimonials/jonas-kotara.webp",
   },
   {
     quote: "Finally a lead gen partner that actually understands B2B sales cycles.",
     author: "Kevin Yam",
     role: "Head of Sales",
     company: "Professional Services",
-    image: "/testimonials/kevin-yam.webp",
   },
   {
     quote: "The email sequences Markety wrote convert better than anything we tried in-house.",
     author: "Kundo Marta",
     role: "Marketing Director",
     company: "Tech Agency",
-    image: "/testimonials/kundo-marta.webp",
-  },
-  {
-    quote: "Markety brought us leads at under $3 each. Our sales team couldn't keep up.",
-    author: "Amy Chase",
-    role: "Founder",
-    company: "E-commerce Brand",
-    image: "/testimonials/amy-chase.webp",
-  },
-  {
-    quote: "We went from zero to 200+ qualified leads in the first two months.",
-    author: "Jonas Kotara",
-    role: "CEO",
-    company: "SaaS Startup",
-    image: "/testimonials/jonas-kotara.webp",
-  },
-  {
-    quote: "Finally a lead gen partner that actually understands B2B sales cycles.",
-    author: "Kevin Yam",
-    role: "Head of Sales",
-    company: "Professional Services",
-    image: "/testimonials/kevin-yam.webp",
-  },
-  {
-    quote: "The email sequences Markety wrote convert better than anything we tried in-house.",
-    author: "Kundo Marta",
-    role: "Marketing Director",
-    company: "Tech Agency",
-    image: "/testimonials/kundo-marta.webp",
   },
 ];
 
@@ -83,68 +37,46 @@ export const Testimonials = ({
 }) => {
   return (
     <>
-      <section className={cn("overflow-hidden py-28 lg:py-32", className)}>
+      <section className={cn("py-28 lg:py-32", className)}>
         <div className="container">
-          <div className="space-y-4">
-            <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
-              What our clients say
-            </h2>
-            <p className="text-muted-foreground max-w-md leading-snug">
-              We work with companies that are serious about growth. Here's what
-              they think about working with Markety.
-            </p>
-            <Button variant="outline" className="shadow-md">
-              Read our Client Stories <ArrowRight className="size-4" />
-            </Button>
+          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
+                What our clients say
+              </h2>
+              <p className="text-muted-foreground mt-4 max-w-md leading-snug">
+                We work with companies that are serious about growth. Here&apos;s what
+                they think about working with Markety.
+              </p>
+            </div>
+            <a
+              href="/contact"
+              className="shrink-0 text-sm font-semibold text-purple-600 hover:underline"
+            >
+              Work with us →
+            </a>
           </div>
 
-          <div className="relative mt-8 -mr-[max(3rem,calc((100vw-80rem)/2+3rem))] md:mt-12 lg:mt-20">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="">
-                {items.map((testimonial, index) => (
-                  <CarouselItem
-                    key={index}
-                    className="xl:basis-1/3.5 grow basis-4/5 sm:basis-3/5 md:basis-2/5 lg:basis-[28%] 2xl:basis-[24%]"
-                  >
-                    <Card className="bg-muted h-full overflow-hidden border-none">
-                      <CardContent className="flex h-full flex-col p-0">
-                        <div className="relative h-[288px] lg:h-[328px]">
-                          <Image
-                            src={testimonial.image}
-                            alt={testimonial.author}
-                            fill
-                            className="object-cover object-top"
-                          />
-                        </div>
-                        <div className="flex flex-1 flex-col justify-between gap-10 p-6">
-                          <blockquote className="font-display text-lg leading-none! font-medium md:text-xl lg:text-2xl">
-                            {testimonial.quote}
-                          </blockquote>
-                          <div className="space-y-0.5">
-                            <div className="text-primary font-semibold">
-                              {testimonial.author}, {testimonial.role}
-                            </div>
-                            <div className="text-muted-foreground text-sm">
-                              {testimonial.company}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="mt-8 flex gap-3">
-                <CarouselPrevious className="bg-muted hover:bg-muted/80 static size-14.5 translate-x-0 translate-y-0 transition-colors [&>svg]:size-6 lg:[&>svg]:size-8" />
-                <CarouselNext className="bg-muted hover:bg-muted/80 static size-14.5 translate-x-0 translate-y-0 transition-colors [&>svg]:size-6 lg:[&>svg]:size-8" />
+          <div className="mt-10 grid gap-4 md:mt-16 md:grid-cols-2">
+            {items.map((testimonial, index) => (
+              <div
+                key={index}
+                className="bg-muted flex flex-col justify-between gap-8 rounded-2xl p-8"
+              >
+                <span className="font-display select-none text-5xl leading-none text-purple-200 dark:text-purple-900">
+                  &ldquo;
+                </span>
+                <blockquote className="font-display text-xl font-medium leading-snug md:text-2xl">
+                  {testimonial.quote}
+                </blockquote>
+                <div>
+                  <div className="text-primary font-semibold">{testimonial.author}</div>
+                  <div className="text-muted-foreground text-sm">
+                    {testimonial.role} · {testimonial.company}
+                  </div>
+                </div>
               </div>
-            </Carousel>
+            ))}
           </div>
         </div>
       </section>
