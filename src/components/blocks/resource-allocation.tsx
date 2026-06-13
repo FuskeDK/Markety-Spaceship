@@ -56,7 +56,7 @@ export const ResourceAllocation = ({ t }: { t: SiteStrings }) => {
                 <div
                   key={i}
                   className={cn(
-                    "bg-background flex flex-col gap-5 overflow-hidden p-6 lg:p-8",
+                    "bg-background flex flex-col gap-4 overflow-hidden p-4 sm:gap-5 sm:p-6 lg:p-8",
                     i === 4 && "sm:col-span-2 lg:col-span-1",
                   )}
                 >
@@ -68,7 +68,7 @@ export const ResourceAllocation = ({ t }: { t: SiteStrings }) => {
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
                   </div>
 
-                  <div className="relative mt-auto overflow-hidden">
+                  <div className="relative mt-auto hidden overflow-hidden sm:block">
                     {config.fade && (
                       <div className="from-background absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t to-transparent" />
                     )}
