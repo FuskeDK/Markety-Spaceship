@@ -254,6 +254,15 @@ ${searchText}`,
       try { parsed = JSON.parse(raw); } catch { return res.status(200).json({ result: null }); }
       if (!parsed || parsed.result === null || !parsed.name) return res.status(200).json({ result: null });
 
+      // Reject non-English companies by email domain
+      const emailVal = (parsed.email as string | null)?.toLowerCase() ?? "";
+      const BLOCKED_TLDS = [".dk", ".de", ".se", ".no", ".fi", ".nl", ".pl", ".cz", ".hu", ".fr", ".it", ".es", ".pt", ".ru", ".cn", ".jp", ".be", ".at"];
+      if (emailVal && BLOCKED_TLDS.some(tld => emailVal.endsWith(tld))) return res.status(200).json({ result: null });
+
+      // Reject by company name patterns typical of non-English entities
+      const nameVal = (parsed.name as string || "").toLowerCase();
+      if (/ a\/s$| aps$| a\.s\.$| gmbh$| ab$| as$| nv$| bv$| srl$| sarl$/.test(nameVal)) return res.status(200).json({ result: null });
+
       // If we have a website but no email, scrape the contact page
       if (parsed.homepage && !parsed.email) {
         try {

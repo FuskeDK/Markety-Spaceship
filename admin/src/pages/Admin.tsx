@@ -336,7 +336,7 @@ export default function Admin() {
           <ClientsTab clients={clients} pending={pending} invoiced={invoiced} expanded={expanded}
             setExpanded={setExpanded} handleInvoice={handleInvoice} authedPw={authedPw!} setClients={setClients} />
         ) : tab === "all-leads" ? (
-          <AllLeadsTab clients={clients} authedPw={authedPw!} />
+          <AllLeadsTab clients={clients} authedPw={authedPw!} setClients={setClients} />
         ) : tab === "invoice-queue" ? (
           <BillingTab authedPw={authedPw!} onInvoiceSent={() => fetchData(authedPw!)} />
         ) : tab === "outreach" ? (
@@ -524,7 +524,7 @@ const LEAD_STATUS_COLORS: Record<string, string> = {
   lost: "bg-red-50 text-red-400",
 };
 
-function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: string }) {
+function AllLeadsTab({ clients, authedPw, setClients }: { clients: ClientRow[]; authedPw: string; setClients: React.Dispatch<React.SetStateAction<ClientRow[]>> }) {
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -533,6 +533,39 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
   const [noteDraft, setNoteDraft] = useState("");
   const [leadStatuses, setLeadStatuses] = useState<Record<string, string>>({});
   const [leadNotes, setLeadNotes] = useState<Record<string, string | null>>({});
+
+  // Add lead modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addClientId, setAddClientId] = useState(clients[0]?.id ?? "");
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPhone, setAddPhone] = useState("");
+  const [addSource, setAddSource] = useState("manual");
+  const [addPrice, setAddPrice] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const openAddModal = () => {
+    setAddClientId(clients[0]?.id ?? "");
+    setAddName(""); setAddEmail(""); setAddPhone(""); setAddSource("manual"); setAddPrice(""); setAddError(null);
+    setShowAddModal(true);
+  };
+
+  const submitAddLead = async () => {
+    if (!addName.trim()) { setAddError("Name is required"); return; }
+    if (!addClientId) { setAddError("Select a client"); return; }
+    setAddLoading(true); setAddError(null);
+    const r = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": authedPw },
+      body: JSON.stringify({ action: "add-lead-manual", clientId: addClientId, name: addName.trim(), email: addEmail.trim() || null, phone: addPhone.trim() || null, source: addSource || "manual", price: addPrice || undefined }),
+    });
+    setAddLoading(false);
+    if (!r.ok) { setAddError("Failed to add lead"); return; }
+    const { lead } = await r.json();
+    setClients(prev => prev.map(c => c.id === addClientId ? { ...c, leads: [...c.leads, lead], leads_this_month: c.leads_this_month + 1 } : c));
+    setShowAddModal(false);
+  };
 
   const allLeads: FlatLead[] = clients
     .flatMap(c => c.leads.map(l => ({ ...l, clientName: c.company, clientId: c.id, currency: c.currency })))
@@ -576,6 +609,64 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
 
   return (
     <div className="space-y-6">
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-base font-bold text-gray-900">Add lead to client</p>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Client *</label>
+                <select value={addClientId} onChange={e => setAddClientId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-200 bg-white">
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Name *</label>
+                  <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="John Smith"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Email</label>
+                  <input value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="john@example.com" type="email"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Phone</label>
+                  <input value={addPhone} onChange={e => setAddPhone(e.target.value)} placeholder="+44 7700 900000"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Source</label>
+                  <input value={addSource} onChange={e => setAddSource(e.target.value)} placeholder="manual"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-gray-500 mb-1 block">Price (leave blank for client default)</label>
+                  <input value={addPrice} onChange={e => setAddPrice(e.target.value)} placeholder="Leave blank = default" type="number" min="0"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                </div>
+              </div>
+            </div>
+            {addError && <p className="text-xs text-red-500">{addError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button onClick={submitAddLead} disabled={addLoading}
+                className="flex-1 h-9 rounded-lg text-sm font-semibold text-white disabled:opacity-60 transition-opacity hover:opacity-90"
+                style={{ background: "hsl(252 89% 58%)" }}>
+                {addLoading ? "Adding…" : "Add lead"}
+              </button>
+              <button onClick={() => setShowAddModal(false)} className="px-4 h-9 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">All leads</h1>
@@ -598,6 +689,11 @@ function AllLeadsTab({ clients, authedPw }: { clients: ClientRow[]; authedPw: st
             <option value="">All statuses</option>
             {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          <button onClick={openAddModal}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold text-white rounded-lg shrink-0"
+            style={{ background: "hsl(252 89% 58%)" }}>
+            <Plus className="w-3.5 h-3.5" /> Add lead
+          </button>
         </div>
       </div>
 
