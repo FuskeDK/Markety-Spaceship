@@ -15,11 +15,11 @@ export const Hero = ({ t }: { t: SiteStrings }) => {
         <p className="text-muted-foreground mt-5 max-w-xl text-lg md:text-xl">
           {t.hero.subheadline}
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <Button size="lg" asChild>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+          <Button size="lg" className="w-full sm:w-auto" asChild>
             <a href="/contact">{t.hero.ctaPrimary}</a>
           </Button>
-          <Button size="lg" variant="outline" className="gap-2" asChild>
+          <Button size="lg" variant="outline" className="w-full gap-2 sm:w-auto" asChild>
             <a href="/#resource-allocation">
               {t.hero.ctaSecondary}
               <ArrowRight className="size-4 stroke-3" />

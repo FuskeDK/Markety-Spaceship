@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Target, Users, TrendingUp, Shield } from "lucide-react";
+import { Target, Users, TrendingUp, Shield, Quote } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Industries } from "@/components/blocks/industries";
 
 const HOW_WE_WORK_STEPS = [
   {
@@ -71,19 +71,29 @@ const About = () => {
         </div>
       </section>
 
-      {/* Three images - portrait row with offset middle */}
-      <section className="container max-w-5xl mt-12 md:mt-16">
-        <div className="grid grid-cols-3 gap-3 md:gap-4">
-          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
-            <Image src="/about/1.webp" alt="Team at work" fill className="object-cover" />
-          </div>
-          <div className="relative overflow-hidden rounded-2xl mt-8 md:mt-12" style={{ aspectRatio: "3/4" }}>
-            <Image src="/about/2.webp" alt="Campaign work" fill className="object-cover" />
-          </div>
-          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
-            <Image src="/about/3.webp" alt="Team environment" fill className="object-cover" />
-          </div>
-        </div>
+      {/* Founder pull-quote */}
+      <section className="container max-w-5xl mt-16 md:mt-24">
+        <figure className="relative overflow-hidden rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-600/[0.06] to-transparent p-8 md:p-14 dark:from-purple-400/[0.06]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl"
+          />
+          <Quote className="size-9 text-purple-600/40 dark:text-purple-400/40" />
+          <blockquote className="font-display mt-6 text-xl font-medium leading-snug tracking-tight text-balance text-foreground md:text-3xl">
+            &ldquo;We got tired of watching great local businesses pay agencies
+            thousands a month for nothing. So we built the opposite: you only pay
+            when we actually bring you a customer.&rdquo;
+          </blockquote>
+          <figcaption className="mt-8 flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-purple-600 text-base font-bold text-white">
+              M
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">The Markety team</div>
+              <div className="text-muted-foreground text-sm">Founders</div>
+            </div>
+          </figcaption>
+        </figure>
       </section>
 
       <section className="container mt-24 max-w-5xl lg:mt-32">
@@ -144,6 +154,30 @@ const About = () => {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Who we help */}
+      <Industries className="mt-24 lg:mt-32" />
+
+      {/* Social proof */}
+      <section className="container mt-24 max-w-5xl lg:mt-32">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { quote: "Leads at under $3 each. Our sales team couldn't keep up.", author: "Amy Chase", role: "Founder" },
+            { quote: "Zero to 200+ qualified leads in our first two months.", author: "Jonas Kotara", role: "CEO" },
+            { quote: "Finally a partner that actually understands our sales cycle.", author: "Kevin Yam", role: "Head of Sales" },
+          ].map((item) => (
+            <figure key={item.author} className="bg-muted flex flex-col justify-between gap-6 rounded-2xl p-6">
+              <blockquote className="font-display text-base font-medium leading-snug text-foreground">
+                &ldquo;{item.quote}&rdquo;
+              </blockquote>
+              <figcaption>
+                <div className="text-sm font-semibold text-foreground">{item.author}</div>
+                <div className="text-muted-foreground text-xs">{item.role}</div>
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
