@@ -1,12 +1,9 @@
 import { Background } from "@/components/background";
-import { Comparison } from "@/components/blocks/comparison";
 import { FAQ } from "@/components/blocks/faq";
 import { Features } from "@/components/blocks/features";
 import { Hero } from "@/components/blocks/hero";
-import { Industries } from "@/components/blocks/industries";
 import { Logos } from "@/components/blocks/logos";
 import { ResourceAllocation } from "@/components/blocks/resource-allocation";
-import { RiskFree } from "@/components/blocks/risk-free";
 import { StatsHero } from "@/components/blocks/stats-hero";
 import { Testimonials } from "@/components/blocks/testimonials";
 import { getSiteT } from "@/lib/get-locale";
@@ -21,10 +18,7 @@ export default async function Home() {
         <Features t={t} />
         <ResourceAllocation t={t} />
       </Background>
-      <Industries />
       <StatsHero t={t} />
-      <Comparison />
-      <RiskFree />
       <Testimonials />
       <FAQ t={t} />
     </>
