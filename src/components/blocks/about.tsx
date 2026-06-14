@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Target, Users, TrendingUp, Shield } from "lucide-react";
 
@@ -66,6 +67,21 @@ const About = () => {
             <p>
               We are customer-obsessed - investing the time to understand every aspect of your business before we build anything. We work on a pay-per-lead model because we believe in earning our keep. We don't win unless you do.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Three images - portrait row with offset middle */}
+      <section className="container max-w-5xl mt-12 md:mt-16">
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/1.webp" alt="Team at work" fill className="object-cover" />
+          </div>
+          <div className="relative overflow-hidden rounded-2xl mt-8 md:mt-12" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/2.webp" alt="Campaign work" fill className="object-cover" />
+          </div>
+          <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "3/4" }}>
+            <Image src="/about/3.webp" alt="Team environment" fill className="object-cover" />
           </div>
         </div>
       </section>
