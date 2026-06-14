@@ -93,7 +93,6 @@ Both are deployed to Vercel. Domain: `marketyleadgen.com`.
 │   │   │   ├── features.tsx    # "Everything your campaign needs" section
 │   │   │   ├── footer.tsx      # Site footer (columns + CTA card + legal links)
 │   │   │   ├── hero.tsx        # Homepage hero (left-aligned headline + feature items)
-│   │   │   ├── investors.tsx   # Investors/partners section
 │   │   │   ├── logos.tsx       # Logo marquee strip
 │   │   │   ├── navbar.tsx      # Top navigation bar
 │   │   │   ├── pricing-table.tsx # Pricing comparison table
