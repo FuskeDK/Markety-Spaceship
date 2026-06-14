@@ -31,3 +31,12 @@ export const statsRatelimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(30, "1 m"),
   prefix: "rl:stats",
 });
+
+// For the unauthenticated outreach company-finder. A single "find random
+// company" click fires up to 15 sequential lookups, so the window is generous
+// for legitimate admin use while still capping abuse of the paid Serper quota.
+export const outreachRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(90, "10 m"),
+  prefix: "rl:outreach",
+});

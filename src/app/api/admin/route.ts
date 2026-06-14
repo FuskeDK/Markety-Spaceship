@@ -12,7 +12,7 @@ import { randomBytes, timingSafeEqual } from "crypto";
 import { ImapFlow } from "imapflow";
 import { createClickUpTask } from "@/lib/server/_clickup";
 import { sendEmail } from "@/lib/server/_mailer";
-import { loginRatelimit } from "@/lib/server/_ratelimit";
+import { loginRatelimit, outreachRatelimit } from "@/lib/server/_ratelimit";
 
 async function appendToSent({ to, subject, html, messageId }: { to: string; subject: string; html: string; messageId?: string }) {
   const client = new ImapFlow({
@@ -174,7 +174,13 @@ async function handleRequest(req: NextRequest): Promise<NextResponse> {
 
     // ── Company finder (Serper.dev Google Search + Claude) ───────────────────
     if (req.method === "GET" && action === "find-companies") {
-      const q = searchParams.get("q") ?? "";
+      const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+      const { success: outreachAllowed } = await outreachRatelimit.limit(`outreach:${ip}`);
+      if (!outreachAllowed) {
+        return NextResponse.json({ result: null, error: "Rate limit exceeded" }, { status: 429 });
+      }
+
+      const q = (searchParams.get("q") ?? "").slice(0, 120);
       if (!q) return NextResponse.json({ result: null });
 
       const serperKey = process.env.SERPER_API_KEY;
