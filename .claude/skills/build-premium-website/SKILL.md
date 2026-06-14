@@ -56,15 +56,15 @@ Build `src/App.jsx` as a single file containing all components (mirror reference
 
 1. **Navbar** -- fixed pill nav, glass-on-scroll, mobile hamburger overlay
 2. **Hero** -- full-dvh, background image + dual gradient overlays, GSAP staggered entrance, floating themed particles (top-right)
-3. **Features** -- 3 interactive cards: one stacked-shuffler, one signature-animation (water-drops adapted to industry), one cursor-on-calendar/scheduler
+3. **WhatSetsUsApart** -- split layout: real Unsplash photo (left) + 4 icon+title+text bullet points (right). GSAP slide-in from left. NO interactive cards, no animations, no gimmicks. Real content specific to the business.
 4. **Pillars** -- 3 trust stats with animated `CountUp` via IntersectionObserver + RAF
-5. **Protocol** -- 3-step sticky-stack with GSAP ScrollTrigger scrub (cards scale/blur/fade as next overlaps)
-6. **ServicesGrid** -- 6-tile dark grid with gap-px dividers and hover state
+5. **HowItWorks** -- 3 numbered steps in a horizontal grid (lg:grid-cols-3). Each step: rounded image + step number overlay + title + description. Simple GSAP stagger. NO sticky-stack, NO GSAP scrub.
+6. **ServicesGrid** -- 6-tile LIGHT grid (bg-surface text-ink) with gap-px dividers and hover state. NOT dark.
 7. **TrustSignals** -- 3 credibility badges with stagger fade-in
 8. **ContactForm** -- name/email/phone/zip + message + drag-drop file upload + idle/sending/sent states
 9. **Footer** -- multi-col grid + status pulse + legal links
 
-Use `lucide-react` icons matched to the user's services. Use the brand's primary color throughout, accent sparingly. Default typography roles: display headings = Plus Jakarta Sans, body = Inter, labels = JetBrains Mono.
+Use `lucide-react` icons matched to the user's services. Use the brand's primary color throughout, accent sparingly. Default typography roles: display headings = Plus Jakarta Sans, body = Inter. **JetBrains Mono is for decorative labels/section tags only -- never for form field labels.**
 
 ## Phase 4 -- Signature animation
 
@@ -91,7 +91,7 @@ Always re-skin -- never just leave the teardrop.
 
 - `npm run dev` (background) and open `http://localhost:5173`
 - Resize to 375 / 768 / 1440 to verify responsive layout
-- Scroll the full page -- confirm hero stagger, feature reveals, sticky-stack scrub, pillar counters, signature animation loop
+- Scroll the full page -- confirm hero stagger, WhatSetsUsApart slide-in, pillar counters, HowItWorks stagger, ServicesGrid hover tiles
 - Submit the contact form (mock state) -- verify idle -> sending -> sent transition
 - Read console messages -- fix any errors
 - Report the local URL to the user
@@ -115,15 +115,20 @@ These sites are built for Markety clients -- the site represents the CLIENT's ow
 
 **NEVER:**
 - Use box-shadow or text-shadow anywhere. Not on cards, buttons, nav, hero text, nothing. Zero exceptions.
-- Use serif/italic fonts (no Cormorant Garamond or italic flourishes). The font stack is Plus Jakarta Sans (display) + Inter (body) + JetBrains Mono (labels). That's it.
+- Use serif/italic fonts (no Cormorant Garamond or italic flourishes). The font stack is Plus Jakarta Sans (display) + Inter (body) + JetBrains Mono (decorative section tags only). That's it.
 - Use en dashes or em dashes (-- or ---) in any user-visible text. Use a plain hyphen (-) or rephrase the sentence instead.
-- Use generic floating card layouts with icon + title + description in a bordered box grid. They read as AI-generated template filler. Instead use the ServicesGrid dark-tile pattern from the reference (gap-px dividers, hover reveals, no borders).
+- Use generic floating card layouts with icon + title + description in a bordered box grid. They read as AI-generated template filler.
+- Use JetBrains Mono on form field labels. Form labels must use `text-sm font-semibold text-ink` (Inter). Mono is only for decorative section slugs like "01 / Title".
+- Use interactive animation cards (shuffler, water drops, scheduler cards) in any section. These look gimmicky and generic. Replace the Features section with a real split-layout: photo left, bullet points right.
+- Use sticky-stack GSAP scrub for the Protocol/process section. Use a simple 3-column numbered step grid with images instead.
+- Use a dark background for ServicesGrid. It looks jarring. ServicesGrid must always be `bg-surface text-ink` (light).
 - Mention Markety anywhere on the site except one small line in the footer: "Website by Markety" in white/20 opacity text.
 
 **ALWAYS:**
 - Match the visual tone to the actual industry. A plumber's site should look credible and straightforward -- deep navy/dark backgrounds, strong typography, clear CTAs. Not pastel cards.
-- Use the ServicesGrid dark-tile grid (from reference) for services, not bordered rounded cards.
-- Keep the glass navbar, GSAP hero stagger, CountUp pillars, sticky-stack Protocol, and signature animation from the reference. These are the premium differentiators.
+- Use the gap-px divider grid pattern (from reference) for ServicesGrid, on a LIGHT background.
+- Keep the glass navbar, GSAP hero stagger, CountUp pillars, and GSAP scroll animations from the reference. These are the premium differentiators.
+- Use real Unsplash images in the WhatSetsUsApart and HowItWorks sections -- never leave image slots empty or as colored blocks.
 
 ## Reference files (read lazily as needed)
 
