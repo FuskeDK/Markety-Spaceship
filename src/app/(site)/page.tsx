@@ -1,4 +1,5 @@
 import { Background } from "@/components/background";
+import { Comparison } from "@/components/blocks/comparison";
 import { FAQ } from "@/components/blocks/faq";
 import { Features } from "@/components/blocks/features";
 import { Hero } from "@/components/blocks/hero";
@@ -19,6 +20,7 @@ export default async function Home() {
         <ResourceAllocation t={t} />
       </Background>
       <StatsHero t={t} />
+      <Comparison />
       <Testimonials />
       <FAQ t={t} />
     </>
